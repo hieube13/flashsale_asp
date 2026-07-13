@@ -5,8 +5,10 @@ using FlashSale.Application.Services.Implementations;
 using FlashSale.Contracts.Messages;
 using FlashSale.Domain.Repositories;
 using FlashSale.Domain.Services;
+using FlashSale.Domain.Services.Implementations;
 using FlashSale.Infrastructure.Cache;
 using FlashSale.Infrastructure.Data;
+using FlashSale.Infrastructure.Data.Dynamic;
 using FlashSale.Infrastructure.DistributedLock;
 using FlashSale.Infrastructure.External;
 using FlashSale.Infrastructure.Messaging;
@@ -65,21 +67,23 @@ builder.Services.AddMemoryCache();
 // ---- Repositories (Infrastructure) ----
 builder.Services.AddScoped<ITicketRepository, TicketRepositoryImpl>();
 builder.Services.AddScoped<ITicketDetailRepository, TicketDetailRepositoryImpl>();
+builder.Services.AddScoped<ITickerOrderRepository, TickerOrderRepositoryImpl>();
 
 // ---- Domain services (Domain) ----
 builder.Services.AddScoped<ITicketDomainService, TicketDomainService>();
 builder.Services.AddScoped<ITicketDetailDomainService, TicketDetailDomainService>();
+builder.Services.AddScoped<IOrderDeductionDomainService, OrderDeductionDomainService>();
 
 // ---- Application services (Application) ----
 builder.Services.AddScoped<ITicketAppService, TicketAppServiceImpl>();
 builder.Services.AddScoped<ITicketDetailAppService, TicketDetailAppServiceImpl>();
+builder.Services.AddScoped<ITicketOrderAppService, TicketOrderAppServiceImpl>();
 
 // ---- Catalog cache (Infrastructure cache + Application abstraction) ----
 builder.Services.AddScoped<ITicketCacheService, FlashSale.Infrastructure.Cache.TicketCacheService>();
 builder.Services.AddScoped<FlashSale.Application.Services.ITicketDetailCacheService, FlashSale.Infrastructure.Cache.TicketDetailCacheService>();
 
 // ---- Other application services — stubs until later tasks land their real impls ----
-builder.Services.AddScoped<ITicketOrderAppService, TicketOrderAppServiceStub>();
 builder.Services.AddScoped<IOrderMqAppService, OrderMqAppServiceStub>();
 builder.Services.AddScoped<IOrderMqConsumerHandler, OrderMqConsumerHandlerStub>();
 builder.Services.AddScoped<IPaymentAppService, PaymentAppServiceStub>();

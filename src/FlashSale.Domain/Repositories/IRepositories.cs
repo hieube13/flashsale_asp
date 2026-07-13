@@ -27,9 +27,9 @@ public interface ITickerOrderRepository
 {
     /// <summary>Dapper dynamic table — table = ticket_order_{yearMonth}</summary>
     Task InsertAsync(string yearMonth, TickerOrder order, CancellationToken ct = default);
-    Task<object[]> FindByOrderNumberAsync(string yearMonth, string orderNumber, CancellationToken ct = default);
-    Task<IReadOnlyList<object[]>> FindAllAsync(string yearMonth, CancellationToken ct = default);
-    Task<IReadOnlyList<object[]>> FindPageAsync(string yearMonth, long lastId, int limit, CancellationToken ct = default);
+    Task<object?[]?> FindByOrderNumberAsync(string yearMonth, string orderNumber, CancellationToken ct = default);
+    Task<IReadOnlyList<object?[]>> FindAllAsync(string yearMonth, CancellationToken ct = default);
+    Task<IReadOnlyList<object?[]>> FindPageAsync(string yearMonth, long lastId, int limit, CancellationToken ct = default);
     Task<bool> UpdateStatusAsync(string yearMonth, string orderNumber, int status, CancellationToken ct = default);
 }
 
