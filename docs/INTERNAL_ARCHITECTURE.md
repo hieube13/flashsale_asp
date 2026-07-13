@@ -81,7 +81,8 @@ src/
 │       ├── ITicketOrderAppService.cs
 │       ├── IOrderMqAppService.cs    # + IOrderMqConsumerHandler
 │       ├── IPaymentAppService.cs
-│       └── IBookingAppService.cs    # + IEmployeeCacheService, IEventAppService
+│       ├── IBookingAppService.cs       # + IEmployeeCacheService, IEventAppService
+│       └── IStockOrderCacheService.cs  # Redis Lua stock cache abstraction (TASK-013)
 │
 ├── FlashSale.Infrastructure/
 │   ├── Data/
@@ -93,8 +94,8 @@ src/
 │   ├── Cache/
 │   │   ├── IRedisInfrasService.cs        # StackExchange.Redis abstraction
 │   │   ├── RedisInfrasService.cs
-│   │   ├── IStockOrderCacheService.cs    # Lua atomic decrement contract
-│   │   ├── StockOrderCacheService.cs     # concrete (stub for now, Lua in TASK-013)
+│   │   ├── IStockOrderCacheService.cs    # [moved to Application/Services in TASK-013]
+│   │   ├── StockOrderCacheService.cs     # Lua atomic decrement (TASK-013)
 │   │   ├── ITicketCacheService.cs        # PRO_TICKET:{id} Redis cache (TASK-011)
 │   │   ├── TicketCacheService.cs         # concrete (TASK-011)
 │   │   └── TicketDetailCacheService.cs   # 2-tier L1 Memory + L2 Redis (TASK-011)
@@ -245,7 +246,7 @@ Each log line includes `RequestId` (auto via `UseSerilogRequestLogging`) and
 |-------|------|--------|
 | Catalog (Ticket CRUD + L1/L2 cache) | TASK-011 | ✅ done (2026-07-13) |
 | Order read (Dapper dynamic table) | TASK-012 | ✅ done (2026-07-14) |
-| Order CAS (Redis Lua + DB safety net) | TASK-013 | pending |
+| Order CAS (Redis Lua + DB safety net) | TASK-013 | ✅ done (2026-07-14) |
 | Order cancel (distributed lock) | TASK-014 | pending |
 | OrderMQ producer | TASK-015 | pending |
 | OrderMQ consumer | TASK-016 | pending |

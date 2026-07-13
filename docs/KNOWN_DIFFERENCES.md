@@ -18,6 +18,8 @@ Each row is one observed difference:
 | 4 | `/ticket/ping/java` response shape | Java returns `{"status":"OK"}` (custom `Response` class), not wrapped in `ResultMessage` | .NET `PingAsync` returns `Ok(new { status = "OK" })` — same raw shape | preserve | FE doesn't call this endpoint; only used by `/ticket/ping/java` parity probes. Keep Java shape verbatim. | TASK-011 |
 | 5 | `PUT /ticket/{id}` (update) | Java method body is **no-op** — always returns `null` data | .NET `TicketAppServiceImpl.UpdateAsync` actually persists changes (name/desc/times) | fix | No FE consumer in `xxxx.fe.com` calls this; Java no-op was almost certainly a TODO. .NET completes the feature so parity tests can verify round-trip. | TASK-011 |
 | 6 | `/ticket/create` transactional boundary | Java calls `ticketRepo.save(ticket)` then `ticketItemRepo.save(detail)` in `TicketDomainService.createTicket` — no `@Transactional` annotation, so two separate MySQL transactions | .NET `TicketDomainService.CreateAsync` calls `_tickets.AddAsync` then `_details.AddAsync` — two separate EF SaveChanges calls, also non-atomic | preserve | Both implementations are equally non-atomic; preserving parity. To make atomic in .NET, wrap with `IDbContextTransaction` — out of scope for TASK-011 (would diverge from Java). | TASK-011 |
+| 7 | Random userId in placeOrderCAS / decreaseStockLevel3CAS | Java: `int userId = ThreadLocalRandom.current().nextInt(1, 10)` — fake demo userId 1-9 | .NET: `Random.Shared.Next(1, 10)` | preserve | Both controllers are demo placeholders; FE doesn't call them. Mirroring the quirk keeps contract parity for golden-JSON tests. Could be promoted to a config-driven value (`Orders:DemoUserId`) if FE later needs to fake a real session. | TASK-013 |
+| 8 | Order number format | Java: `"OKX-SGN-" + userId + "-" + ORDER_SEQ.incrementAndGet() + "-" + System.currentTimeMillis()` (hard-coded prefix) | .NET: `$"OKX-SGN-{userId}-{seq}-{tsMillis}"` (same literal) | preserve | Same default in both → parity preserved unless user overrides via `Orders:NumberPrefix`. Config hook is the planned escape valve; not wired yet (out of TASK-013 scope). | TASK-013 |
 
 ---
 
@@ -46,13 +48,7 @@ String vnp_SecureHash = hmacSHA512("SECRET", hashDataStr);
 - Same default → parity preserved unless user overrides.
 - `Verdict`: **preserve** (parity) with config hook.
 
-### 3. ThreadLocalRandom for userId (TASK-013)
-
-**Java** uses `ThreadLocalRandom.current().nextInt(1, 10)` to fake userId in `placeOrderCAS` / `decreaseStockLevel3CAS`.
-
-**TASK-013 .NET plan**:
-- Preserve in .NET using `Random.Shared.Next(1, 10)`.
-- `Verdict`: **preserve** (parity — these are demo controllers).
+### 3. ~~ThreadLocalRandom for userId~~ → promoted to main table row #7 (TASK-013 landed)
 
 ### 4. Order status 200 on error (TASK-013, 015, 020)
 
@@ -87,13 +83,7 @@ String vnp_SecureHash = hmacSHA512("SECRET", hashDataStr);
 
 **`Verdict`**: **preserve**.
 
-### 8. Java userId pattern in orderQueue (TASK-015)
-
-**Java** uses `ThreadLocalRandom.current().nextInt(1, 10)` for `userId` in MQ flow.
-
-**.NET** mirrors same via `Random.Shared.Next(1, 10)`.
-
-**`Verdict`**: **preserve**.
+### 8. ~~Java userId pattern in orderQueue (TASK-015)~~ → already covered by main table row #7 (TASK-013)
 
 ---
 
