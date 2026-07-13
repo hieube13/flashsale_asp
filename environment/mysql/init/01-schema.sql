@@ -58,3 +58,34 @@ CREATE TABLE IF NOT EXISTS ticket_order (
 -- checked in here because shards are append-only and TableCreateAutoService handles them.
 -- If you want to ship pre-seeded shards for testing, add examples like:
 --   CREATE TABLE IF NOT EXISTS ticket_order_202407 (...same shape as ticket_order above...) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 6. order_queue — async order tracking (TASK-015).
+-- Mirrors Java order_queue (lines 135-147 of ticket_init.sql) with PascalCase columns
+-- to match EF Core / Pomelo MySQL mapping convention used by ticket / ticket_item.
+CREATE TABLE IF NOT EXISTS order_queue (
+  Id           BIGINT NOT NULL AUTO_INCREMENT,
+  Token        VARCHAR(64) NOT NULL,
+  TicketId     INT NOT NULL,
+  Quantity     INT NOT NULL,
+  UserId       INT NOT NULL,
+  Status       TINYINT NOT NULL DEFAULT 0 COMMENT '0=PENDING, 1=SUCCESS, 2=FAILED',
+  OrderNumber  VARCHAR(64) NULL,
+  Message      VARCHAR(255) NULL,
+  CreatedAt    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UpdatedAt    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (Id),
+  UNIQUE KEY uk_order_queue_token (Token)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 7. outbox_event — transactional outbox for Kafka publish (TASK-015).
+CREATE TABLE IF NOT EXISTS outbox_event (
+  Id           BIGINT NOT NULL AUTO_INCREMENT,
+  AggregateId  VARCHAR(64) NOT NULL COMMENT 'Token của order — dùng cho idempotency check phía consumer',
+  EventType    VARCHAR(64) NOT NULL COMMENT 'ORDER_PLACED | …',
+  Payload      TEXT NOT NULL COMMENT 'JSON của PlaceOrderMQMessage',
+  Status       TINYINT NOT NULL DEFAULT 0 COMMENT '0=PENDING, 1=PUBLISHED',
+  CreatedAt    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PublishedAt  DATETIME NULL,
+  PRIMARY KEY (Id),
+  KEY idx_status_created (Status, CreatedAt)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

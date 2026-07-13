@@ -12,6 +12,7 @@ using FlashSale.Infrastructure.Data.Dynamic;
 using FlashSale.Infrastructure.DistributedLock;
 using FlashSale.Infrastructure.External;
 using FlashSale.Infrastructure.Messaging;
+using FlashSale.Infrastructure.Persistence;
 using FlashSale.Infrastructure.Persistence.Repositories;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
@@ -76,23 +77,28 @@ builder.Services.AddMemoryCache();
 builder.Services.AddScoped<ITicketRepository, TicketRepositoryImpl>();
 builder.Services.AddScoped<ITicketDetailRepository, TicketDetailRepositoryImpl>();
 builder.Services.AddScoped<ITickerOrderRepository, TickerOrderRepositoryImpl>();
+builder.Services.AddScoped<IOrderQueueRepository, OrderQueueRepositoryImpl>();
+builder.Services.AddScoped<IOutboxEventRepository, OutboxEventRepositoryImpl>();
 
 // ---- Domain services (Domain) ----
 builder.Services.AddScoped<ITicketDomainService, TicketDomainService>();
 builder.Services.AddScoped<ITicketDetailDomainService, TicketDetailDomainService>();
 builder.Services.AddScoped<IOrderDeductionDomainService, OrderDeductionDomainService>();
 
+// ---- Transactional outbox (Application abstraction + EF impl) ----
+builder.Services.AddScoped<IOrderMqTransactionService, OrderMqTransactionServiceImpl>();
+
 // ---- Application services (Application) ----
 builder.Services.AddScoped<ITicketAppService, TicketAppServiceImpl>();
 builder.Services.AddScoped<ITicketDetailAppService, TicketDetailAppServiceImpl>();
 builder.Services.AddScoped<ITicketOrderAppService, TicketOrderAppServiceImpl>();
+builder.Services.AddScoped<IOrderMqAppService, OrderMqAppServiceImpl>();
 
 // ---- Catalog cache (Infrastructure cache + Application abstraction) ----
 builder.Services.AddScoped<ITicketCacheService, FlashSale.Infrastructure.Cache.TicketCacheService>();
 builder.Services.AddScoped<FlashSale.Application.Services.ITicketDetailCacheService, FlashSale.Infrastructure.Cache.TicketDetailCacheService>();
 
 // ---- Other application services — stubs until later tasks land their real impls ----
-builder.Services.AddScoped<IOrderMqAppService, OrderMqAppServiceStub>();
 builder.Services.AddScoped<IOrderMqConsumerHandler, OrderMqConsumerHandlerStub>();
 builder.Services.AddScoped<IPaymentAppService, PaymentAppServiceStub>();
 builder.Services.AddScoped<IBookingAppService, BookingAppServiceStub>();
