@@ -9,7 +9,8 @@ namespace FlashSale.Api.Stubs;
 /// Stub services — placeholder only.
 /// Real implementations are added in subsequent tasks:
 ///   TASK-011: Catalog (ITicketAppService, ITicketDetailAppService)
-///   TASK-013: Order CAS slice (ITicketOrderAppService.PlaceOrderCasAsync)
+///   TASK-013: Order CAS slice (ITicketOrderAppService.PlaceOrderCasAsync, DecreaseStock*)
+///   TASK-014: Order cancel slice (ITicketOrderAppService.CancelOrderAsync)
 ///   TASK-015: OrderMQ producer (IOrderMqAppService)
 ///   TASK-016: OrderMQ consumer (IOrderMqConsumerHandler)
 ///   TASK-018: Payment (IPaymentAppService)
@@ -32,19 +33,6 @@ public sealed class TicketDetailAppServiceStub : ITicketDetailAppService
 {
     public Task<TicketDetailDto> GetByIdAsync(long detailId, long? version, CancellationToken ct = default) => throw new NotImplementedException();
     public Task<bool> OrderByUserAsync(long detailId, CancellationToken ct = default) => throw new NotImplementedException();
-}
-
-public sealed class TicketOrderAppServiceStub : ITicketOrderAppService
-{
-    public Task<bool> DecreaseStockLevel1Async(long ticketId, int quantity, CancellationToken ct = default) => throw new NotImplementedException();
-    public Task<bool> DecreaseStockLevel3CasAsync(long ticketId, int quantity, CancellationToken ct = default) => throw new NotImplementedException();
-    public Task<PlaceOrderResponse> PlaceOrderCasAsync(long ticketId, int quantity, CancellationToken ct = default) => throw new NotImplementedException();
-    public Task<bool> DecreaseStockQueueAsync(long userId, long ticketId, int quantity, CancellationToken ct = default) => throw new NotImplementedException();
-    public Task<int> GetStockAvailableAsync(long ticketId, CancellationToken ct = default) => throw new NotImplementedException();
-    public Task<IReadOnlyList<TicketOrderDto>> FindAllAsync(string yearMonth, CancellationToken ct = default) => throw new NotImplementedException();
-    public Task<PagedOrdersDto> FindPageAsync(string yearMonth, long lastId, int limit, CancellationToken ct = default) => throw new NotImplementedException();
-    public Task<TicketOrderDto?> FindByOrderNumberAsync(string yearMonth, string orderNumber, CancellationToken ct = default) => throw new NotImplementedException();
-    public Task<bool> CancelOrderAsync(long userId, string orderNumber, CancellationToken ct = default) => throw new NotImplementedException();
 }
 
 public sealed class OrderMqAppServiceStub : IOrderMqAppService

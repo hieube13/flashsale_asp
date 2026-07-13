@@ -89,7 +89,7 @@ src/
 │   │   ├── IDbConnectionFactory.cs
 │   │   └── MySqlConnectionFactory.cs
 │   ├── Data/Dynamic/                      # Dapper-based dynamic tables (TASK-012)
-│   │   └── (added in TASK-012)
+│   │   └── TickerOrderRepositoryImpl.cs   # ticket_order_{yyyyMM} reads + Dapper inserts
 │   ├── Cache/
 │   │   ├── IRedisInfrasService.cs        # StackExchange.Redis abstraction
 │   │   ├── RedisInfrasService.cs
@@ -121,6 +121,7 @@ src/
     ├── Controllers/                        # added per TASK-011..020
     │   ├── TicketController.cs             # 7 endpoints (TASK-011)
     │   └── TicketDetailController.cs       # 3 endpoints incl. /ticket/ping/java (TASK-011)
+    │   ├── OrderController.cs              # 3 read endpoints (TASK-012)
     ├── Middleware/                         # CorrelationId (TASK-010)
     ├── appsettings.json
     └── appsettings.Development.json
@@ -143,7 +144,7 @@ tests/
 | Service interface (Application) | `I{Module}AppService` | `ITicketAppService` |
 | Service impl | `{Module}AppServiceImpl` | `TicketAppServiceImpl` (TASK-011) |
 | Domain service interface | `I{Domain}{Thing}DomainService` | `IOrderDeductionDomainService` |
-| Domain service impl | `{Domain}{Thing}DomainServiceImpl` | `OrderDeductionDomainServiceImpl` (TASK-012) |
+| Domain service impl | `{Domain}{Thing}DomainServiceImpl` | `OrderDeductionDomainService` (TASK-012 — ExtractYearMonth only) |
 | Controller | `{Entity}Controller` (no `I` prefix) | `TicketController` |
 | Worker (BackgroundService) | `{Purpose}Worker` | `OutboxPublisherWorker` |
 | DTO (request) | `{Verb}{Entity}Request` | `CreateBookingRequest` |
@@ -243,7 +244,7 @@ Each log line includes `RequestId` (auto via `UseSerilogRequestLogging`) and
 | Slice | Task | Status |
 |-------|------|--------|
 | Catalog (Ticket CRUD + L1/L2 cache) | TASK-011 | ✅ done (2026-07-13) |
-| Order read (Dapper dynamic table) | TASK-012 | pending |
+| Order read (Dapper dynamic table) | TASK-012 | ✅ done (2026-07-14) |
 | Order CAS (Redis Lua + DB safety net) | TASK-013 | pending |
 | Order cancel (distributed lock) | TASK-014 | pending |
 | OrderMQ producer | TASK-015 | pending |
