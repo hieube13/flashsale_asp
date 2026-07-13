@@ -1,4 +1,4 @@
-namespace FlashSale.Infrastructure.Cache;
+namespace FlashSale.Application.Services;
 
 /// <summary>
 /// Stock cache service — wraps Redis Lua atomic decrement.

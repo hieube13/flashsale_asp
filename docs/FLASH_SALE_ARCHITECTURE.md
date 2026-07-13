@@ -144,13 +144,10 @@ KafkaOrderConsumerWorker:
 
 ## 9. Current state
 
-Phase 0 (TASK-001..010) + Phase 1 first + second slices (TASK-011 catalog, TASK-012 order read) complete.
-`/health` + `/metrics` + `/ticket/*` (10 endpoints) + `/order/{userId}/list`,
-`/order/{userId}/list/page`, `/order/{userId}/{orderNumber}` are live. The
-remaining tasks (TASK-013..020) bring Order CAS, OrderMQ, Payment, Employee,
-Booking controllers online. Stubs remain wired for tasks not yet started.
+Phase 0 (TASK-001..010) + Phase 1 first + second + third slices (TASK-011 catalog, TASK-012 order read, TASK-013 order CAS) complete.
+`/health` + `/metrics` + `/ticket/*` (10 endpoints) + 3 `/order/{userId}/*` reads + 4 order CAS routes (`POST /order/cas`, `GET /order/{ticketId}/{quantity}/order|cas|queued`) are live. The remaining tasks (TASK-014..020) bring order cancel, OrderMQ producer/consumer/publisher, Payment, Employee, Booking controllers online. Stubs remain wired for tasks not yet started.
 
-Next step: TASK-013 — Redis Lua atomic decrement + DB safety net for placeOrderCAS / decreaseStockLevel3CAS.
+Next step: TASK-014 — order cancel (Redis distributed lock + Redis restore).
 
 ## 10. API Endpoints
 
@@ -170,10 +167,13 @@ Behaviour parity is verified in TASK-021 via golden-JSON comparison.
 | GET | `/ticket/{ticketId}/detail/{detailId}` | `TicketDetailController.GetDetailAsync` | TASK-011 | ✅ done | `TicketDetailController.java:56` |
 | GET | `/ticket/{ticketId}/detail/{detailId}/order` | `TicketDetailController.OrderByUserAsync` | TASK-011 | ✅ done (raw `true`) | `TicketDetailController.java:71` (raw bool, quirk preserved) |
 | GET | `/ticket/ping/java` | `TicketDetailController.PingAsync` | TASK-011 | ✅ done (1s sleep) | `TicketDetailController.java:23` |
+| GET | `/order/{ticketId}/{quantity}/order` | `OrderController.PlaceOrderCasGetAsync` | TASK-013 | ✅ done | Java parity (TBD) |
+| GET | `/order/{ticketId}/{quantity}/cas` | `OrderController.DecreaseStockLevel3CasAsync` | TASK-013 | ✅ done | Java parity (TBD) |
+| GET | `/order/{ticketId}/{quantity}/{userId}/queued` | `OrderController.DecreaseStockQueueAsync` | TASK-013 | ✅ done (501, TASK-015 stub) | Java parity (TBD) |
 | GET | `/order/{userId}/list` | `OrderController.ListByUserAsync` | TASK-012 | ✅ done | Java parity (TBD) |
 | GET | `/order/{userId}/list/page` | `OrderController.ListPageByUserAsync` | TASK-012 | ✅ done | Java parity (TBD) |
 | GET | `/order/{userId}/{orderNumber}` | `OrderController.GetByOrderNumberAsync` | TASK-012 | ✅ done | Java parity (TBD) |
-| POST | `/order/cas` | `OrderController` | TASK-013 | pending | Java TBD |
+| POST | `/order/cas` | `OrderController.PlaceOrderCasAsync` | TASK-013 | ✅ done | Java parity (TBD) |
 | PUT | `/order/{userId}/{orderNumber}/cancel` | `OrderController` | TASK-014 | pending | Java TBD |
 | POST | `/api/bookings` | `BookingController` | TASK-020 | pending | Java TBD |
 | GET | `/hello/hi`, `/hello/hi/v1`, `/hello/circuit/breaker` | `HiController` | TASK-020 | pending | Java TBD |
