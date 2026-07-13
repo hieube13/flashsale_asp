@@ -82,7 +82,8 @@ src/
 │       ├── IOrderMqAppService.cs    # + IOrderMqConsumerHandler
 │       ├── IPaymentAppService.cs
 │       ├── IBookingAppService.cs       # + IEmployeeCacheService, IEventAppService
-│       └── IStockOrderCacheService.cs  # Redis Lua stock cache abstraction (TASK-013)
+│       ├── IStockOrderCacheService.cs  # Redis Lua stock cache abstraction (TASK-013)
+│       └── IDistributedLock.cs         # Distributed lock abstraction (TASK-014) — impl in Infrastructure
 │
 ├── FlashSale.Infrastructure/
 │   ├── Data/
@@ -103,8 +104,9 @@ src/
 │   │   ├── Repositories/TicketRepositoryImpl.cs        # EF Core Ticket (TASK-011)
 │   │   └── Repositories/TicketDetailRepositoryImpl.cs  # EF Core TicketDetail + FOR UPDATE CAS (TASK-011)
 │   ├── DistributedLock/
-│   │   ├── IDistributedLock.cs
-│   │   └── RedLockDistributedLockProvider.cs  # stub now, RedLock impl in TASK-006
+│   │   ├── IDistributedLock.cs                # [moved to Application/Services in TASK-014]
+│   │   ├── RedLockDistributedLockProvider.cs  # Real RedLock.net impl (TASK-014)
+│   │   └── RedLockFactoryBuilder.cs           # Wraps RedLockNet.SERedis.RedLockFactory.Create (TASK-014)
 │   ├── Messaging/
 │   │   ├── IKafkaOrderProducer.cs
 │   │   └── KafkaOrderProducer.cs         # Confluent.Kafka
@@ -247,7 +249,7 @@ Each log line includes `RequestId` (auto via `UseSerilogRequestLogging`) and
 | Catalog (Ticket CRUD + L1/L2 cache) | TASK-011 | ✅ done (2026-07-13) |
 | Order read (Dapper dynamic table) | TASK-012 | ✅ done (2026-07-14) |
 | Order CAS (Redis Lua + DB safety net) | TASK-013 | ✅ done (2026-07-14) |
-| Order cancel (distributed lock) | TASK-014 | pending |
+| Order cancel (distributed lock) | TASK-014 | ✅ done (2026-07-14) |
 | OrderMQ producer | TASK-015 | pending |
 | OrderMQ consumer | TASK-016 | pending |
 | OrderMQ publisher (outbox drain) | TASK-017 | pending |

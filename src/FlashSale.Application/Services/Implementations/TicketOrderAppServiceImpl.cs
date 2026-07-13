@@ -14,12 +14,14 @@ namespace FlashSale.Application.Services.Implementations;
 ///   <item>TASK-012 — findAll / findPage / findByOrderNumber (Dapper dynamic table).</item>
 ///   <item>TASK-013 — placeOrderCAS / decreaseStockLevel3CAS / decreaseStockLevel1 / getStockAvailable.
 ///     Redis Lua atomic decrement + MySQL FOR UPDATE safety net + Dapper insert into
-///     <c>ticket_order_{yyyyMM}</c>. Order number format and the random userId quirk
-///     are preserved verbatim from Java — see <c>KNOWN_DIFFERENCES.md</c> entries
-///     2 (order number prefix) and 3 (ThreadLocalRandom userId).</item>
+///     <c>ticket_order_{yyyyMM}</c>.</item>
+///   <item>TASK-014 — cancelOrder: distributed lock (key per orderNumber) +
+///     ownership check + idempotent status update + DB stock restore (EF Core)
+///     + Redis stock restore (best-effort). Mirrors Java TicketOrderAppServiceImpl
+///     lines 439-511.</item>
 /// </list>
 /// Methods still owned by later tasks throw <see cref="NotImplementedException"/>:
-/// <c>DecreaseStockQueueAsync</c> → TASK-015, <c>CancelOrderAsync</c> → TASK-014.
+/// <c>DecreaseStockQueueAsync</c> → TASK-015.
 /// </summary>
 public sealed class TicketOrderAppServiceImpl : ITicketOrderAppService
 {
@@ -27,6 +29,7 @@ public sealed class TicketOrderAppServiceImpl : ITicketOrderAppService
     private readonly IOrderDeductionDomainService _domain;
     private readonly ITicketDetailRepository _details;
     private readonly IStockOrderCacheService _stockCache;
+    private readonly IDistributedLockProvider _lockProvider;
     private readonly ILogger<TicketOrderAppServiceImpl> _log;
 
     private static int _orderSeq;
@@ -36,12 +39,14 @@ public sealed class TicketOrderAppServiceImpl : ITicketOrderAppService
         IOrderDeductionDomainService domain,
         ITicketDetailRepository details,
         IStockOrderCacheService stockCache,
+        IDistributedLockProvider lockProvider,
         ILogger<TicketOrderAppServiceImpl> log)
     {
         _orders = orders;
         _domain = domain;
         _details = details;
         _stockCache = stockCache;
+        _lockProvider = lockProvider;
         _log = log;
     }
 
@@ -215,12 +220,112 @@ public sealed class TicketOrderAppServiceImpl : ITicketOrderAppService
     public async Task<int> GetStockAvailableAsync(long ticketId, CancellationToken ct = default)
         => await _details.GetStockAvailableAsync(ticketId, ct);
 
+    // ============== TASK-014: order cancel slice ==============
+
+    /// <summary>
+    /// Cancel an order under a distributed lock so two concurrent cancels
+    /// cannot double-restore the stock.
+    /// <para/>
+    /// Pipeline (mirrors Java TicketOrderAppServiceImpl.cancelOrder lines 439-511):
+    /// <list type="number">
+    ///   <item>Acquire Redis lock at <c>LOCK:CANCEL_ORDER:{orderNumber}</c> (wait 1s, expiry 5s).</item>
+    ///   <item>Resolve year-month shard name from order_number trailing ts segment.</item>
+    ///   <item>Fetch order row by order_number; ownership check.</item>
+    ///   <item>If already CANCELLED (status=2) → idempotent return <c>true</c>.</item>
+    ///   <item>Set status=2 via Dapper <c>UpdateStatusAsync</c>.</item>
+    ///   <item>Restore DB stock via EF Core <c>IncreaseStockAsync</c>.</item>
+    ///   <item>Best-effort Redis stock restore — failure logged not thrown
+    ///         (matches Java's inconsistency tolerance).</item>
+    /// </list>
+    /// </summary>
+    public async Task<bool> CancelOrderAsync(long userId, string orderNumber, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(orderNumber))
+            throw new ArgumentException("orderNumber is required", nameof(orderNumber));
+
+        const int CancelledStatus = 2;
+        var lockKey = $"LOCK:CANCEL_ORDER:{orderNumber}";
+        var lockHandle = _lockProvider.GetLock(lockKey);
+
+        // Java: tryLock(1, 5, TimeUnit.SECONDS) → wait=1s, expiry=5s
+        var acquired = await lockHandle.TryAcquireAsync(
+            expiry: TimeSpan.FromSeconds(5),
+            wait: TimeSpan.FromSeconds(1),
+            ct: ct);
+
+        try
+        {
+            if (!acquired)
+            {
+                _log.LogWarning("cancelOrder: lock busy for {OrderNumber}", orderNumber);
+                return false;
+            }
+
+            var yearMonth = _domain.ExtractYearMonth(orderNumber);
+            var row = await _orders.FindByOrderNumberAsync(yearMonth, orderNumber, ct);
+            if (row is null)
+            {
+                _log.LogWarning("cancelOrder: order not found {OrderNumber}", orderNumber);
+                return false;
+            }
+
+            var order = MapRowToDto(row);
+            if (order.UserId != (int)userId)
+            {
+                _log.LogError("cancelOrder: order {OrderNumber} does not belong to user {UserId}", orderNumber, userId);
+                return false;
+            }
+
+            if (order.OrderStatus == CancelledStatus)
+            {
+                _log.LogInformation("cancelOrder: order already cancelled {OrderNumber}", orderNumber);
+                return true;
+            }
+
+            var updated = await _orders.UpdateStatusAsync(yearMonth, orderNumber, CancelledStatus, ct);
+            if (!updated)
+            {
+                _log.LogError("cancelOrder: failed to update status to CANCELLED for {OrderNumber}", orderNumber);
+                return false;
+            }
+
+            var ticketId = (long)order.TicketId;
+            var quantity = order.Quantity;
+
+            // Restore DB stock. The TaskOrder .NET path uses EF Core
+            // TryDecreaseStockAsync's inverse (IncreaseStockAsync) which does a
+            // simple read-modify-write. This is intentionally non-atomic to
+            // preserve parity with Java's `tickerOrderDomainService.increaseStock`
+            // (also non-atomic by design). The repo does not return a bool —
+            // any DB error propagates as an exception which is caught by the
+            // outer try and surfaces as a 500 in the controller.
+            await _details.IncreaseStockAsync(ticketId, quantity, ct);
+
+            // Restore Redis (best-effort — Java only warns here too).
+            var redisRecovered = await _stockCache.IncreaseStockCacheAsync(ticketId, quantity, ct);
+            if (!redisRecovered)
+            {
+                _log.LogWarning("cancelOrder: Redis stock restore FAILED (inconsistency); order={OrderNumber}", orderNumber);
+            }
+
+            _log.LogInformation("cancelOrder: success {OrderNumber} ticketId={TicketId} qty={Qty}", orderNumber, ticketId, quantity);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "cancelOrder: unexpected error for {OrderNumber}", orderNumber);
+            throw;
+        }
+        finally
+        {
+            await lockHandle.ReleaseAsync(ct);
+        }
+    }
+
     // ============== Stubs until later tasks port them ==============
 
     public Task<bool> DecreaseStockQueueAsync(long userId, long ticketId, int quantity, CancellationToken ct = default)
         => throw new NotImplementedException("TASK-015: order MQ producer");
-    public Task<bool> CancelOrderAsync(long userId, string orderNumber, CancellationToken ct = default)
-        => throw new NotImplementedException("TASK-014: order cancel slice");
 
     // ============== Helpers ==============
 
