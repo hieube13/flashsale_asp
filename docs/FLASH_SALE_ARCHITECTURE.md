@@ -63,7 +63,7 @@ Mirror of `xxxx.com-18-06-26` (Spring Boot 3.3.5 / Java 21 / DDD modular monolit
 | catalog (read) | `TicketOrderAppServiceImpl.findAll/findPage/findByOrderNumber` | `FlashSale.Application.Services.TicketOrderAppServiceImpl` | ✅ TASK-012 |
 | order | `TicketOrderAppServiceImpl.placeOrderCAS` | same | ✅ TASK-013 |
 | order | `cancelOrder` | same | ✅ TASK-014 |
-| order-mq | `OrderMQAppServiceImpl.placeOrderMQ` | `FlashSale.Application.Services.OrderMqAppService` | 🟡 TASK-015 |
+| order-mq | `OrderMQAppServiceImpl.placeOrderMQ` | `FlashSale.Application.Services.OrderMqAppServiceImpl` | ✅ TASK-015 |
 | order-mq | `KafkaOrderConsumer` | `FlashSale.Api.Workers.KafkaOrderConsumerWorker` | 🟡 TASK-016 |
 | order-mq | `OutboxPublisherJob` | `FlashSale.Api.Workers.OutboxPublisherWorker` | 🟡 TASK-017 |
 | payment | `PaymentController`, `PaymentAppServiceImpl`, `VnPayGatewayServiceImpl` | `FlashSale.Api.Controllers.PaymentController`, `FlashSale.Application.Services.PaymentAppService`, `FlashSale.Infrastructure.External.VnPayGatewayService` | 🟡 TASK-018 |
@@ -145,9 +145,9 @@ KafkaOrderConsumerWorker:
 ## 9. Current state
 
 Phase 0 (TASK-001..010) + Phase 1 first + second + third slices (TASK-011 catalog, TASK-012 order read, TASK-013 order CAS) complete.
-`/health` + `/metrics` + `/ticket/*` (10 endpoints) + 3 `/order/{userId}/*` reads + 4 order CAS routes (`POST /order/cas`, `GET /order/{ticketId}/{quantity}/order|cas|queued`) + `PUT /order/{userId}/{orderNumber}/cancel` (TASK-014) are live. The remaining tasks (TASK-015..020) bring OrderMQ producer/consumer/publisher, Payment, Employee, Booking controllers online. Stubs remain wired for tasks not yet started.
+`/health` + `/metrics` + `/ticket/*` (10 endpoints) + 3 `/order/{userId}/*` reads + 4 order CAS routes (`POST /order/cas`, `GET /order/{ticketId}/{quantity}/order|cas|queued`) + `PUT /order/{userId}/{orderNumber}/cancel` (TASK-014) + `POST /order/mq` + `GET /order/mq/status/{token}` (TASK-015) are live. The remaining tasks (TASK-016..020) bring OrderMQ consumer/publisher, Payment, Employee, Booking controllers online. Stubs remain wired for tasks not yet started.
 
-Next step: TASK-015 — order MQ producer (Lua pre-deduct + insert `order_queue` + `outbox_event` in 1 tx).
+Next step: TASK-016 — order MQ consumer (idempotency gate + DB decrement + insert `ticket_order_{yyyyMM}` + flip `order_queue.status`).
 
 ## 10. API Endpoints
 
@@ -175,6 +175,8 @@ Behaviour parity is verified in TASK-021 via golden-JSON comparison.
 | GET | `/order/{userId}/{orderNumber}` | `OrderController.GetByOrderNumberAsync` | TASK-012 | ✅ done | Java parity (TBD) |
 | POST | `/order/cas` | `OrderController.PlaceOrderCasAsync` | TASK-013 | ✅ done | Java parity (TBD) |
 | PUT | `/order/{userId}/{orderNumber}/cancel` | `OrderController.CancelOrderAsync` | TASK-014 | ✅ done | Java `TicketOrderController.cancelOrder` — distributed lock `LOCK:CANCEL_ORDER:{orderNumber}` (wait 1 s, expiry 5 s) + idempotent on already-CANCELLED + DB stock restore + best-effort Redis stock restore. Always HTTP 200 with `success:true|false` (matches `KNOWN_DIFFERENCES.md` §4). |
+| POST | `/order/mq` | `OrderMQController.PlaceOrderMqAsync` | TASK-015 | ✅ done | Java `OrderMQController.placeOrderMQ` — Redis Lua pre-deduct + cache-miss warm + retry + atomic INSERT `order_queue` + INSERT `outbox_event` in 1 EF transaction. Body `{ticketId, quantity}` → 200 with `{success:true,orderNumber:"MQ-…"}` on queued or `{success:false,code:"OUT_OF_STOCK\|PRICE_NOT_FOUND\|TICKET_NOT_FOUND\|INTERNAL_ERROR",message}`. On any DB throw → compensate Redis via `IncreaseStockCacheAsync`. |
+| GET | `/order/mq/status/{token}` | `OrderMQController.GetOrderStatusAsync` | TASK-015 | ✅ done | Java `OrderMQController.getOrderStatus` — returns the full `OrderQueue` row (status 0/1/2 + orderNumber + message) or 404 envelope when token unknown. |
 | POST | `/api/bookings` | `BookingController` | TASK-020 | pending | Java TBD |
 | GET | `/hello/hi`, `/hello/hi/v1`, `/hello/circuit/breaker` | `HiController` | TASK-020 | pending | Java TBD |
 | POST | `/api/v1/secure/data`, `GET /api/v1/secure/info` | `SecureApiController` | TASK-020 | pending | Java TBD |
