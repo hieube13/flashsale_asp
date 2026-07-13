@@ -143,6 +143,46 @@ KafkaOrderConsumerWorker:
 
 ## 9. Current state
 
-This is the **Phase 0 scaffold**. All concrete service implementations throw `NotImplementedException` until their respective TASK-011..020 ships. The solution compiles, the API boots, `/health` and `/metrics` respond.
+Phase 0 (TASK-001..010) + Phase 1 first slice (TASK-011 catalog) complete.
+`/health` + `/metrics` + `/ticket/*` (10 endpoints) are live. The remaining
+tasks (TASK-012..020) bring Order, OrderMQ, Payment, Employee, Booking
+controllers online. The legacy stubs remain wired for tasks not yet started.
 
-Next step: TASK-011 — implement `ITicketAppService` to port `TicketAppServiceImpl` from Java.
+Next step: TASK-012 — port the Dapper-backed `ticker_order_yyyyMM` read slice.
+
+## 10. API Endpoints
+
+This table lists every HTTP route the .NET backend exposes, mirroring the Java
+controller surface. Each row is filled in by the task that lands the endpoint.
+Behaviour parity is verified in TASK-021 via golden-JSON comparison.
+
+| Method | Route | Controller | .NET task | Status | Java source |
+|--------|-------|------------|-----------|--------|-------------|
+| GET | `/ticket/active` | `TicketController.GetAllActiveAsync` | TASK-011 | ✅ done | `TicketController.java:38` |
+| POST | `/ticket/create` | `TicketController.CreateAsync` | TASK-011 | ✅ done | `TicketController.java:74` |
+| GET | `/ticket/{id}` | `TicketController.GetByIdAsync` | TASK-011 | ✅ done | `TicketController.java:108` |
+| PUT | `/ticket/{id}` | `TicketController.UpdateAsync` | TASK-011 | ✅ done | `TicketController.java:130` (Java no-op; .NET persists) |
+| PUT | `/ticket/{id}/active` | `TicketController.ActivateAsync` | TASK-011 | ✅ done | `TicketController.java:155` |
+| PUT | `/ticket/{id}/inactive` | `TicketController.DeactivateAsync` | TASK-011 | ✅ done | `TicketController.java:176` |
+| DELETE | `/ticket/{id}` | `TicketController.DeleteAsync` | TASK-011 | ✅ done | `TicketController.java:197` |
+| GET | `/ticket/{ticketId}/detail/{detailId}` | `TicketDetailController.GetDetailAsync` | TASK-011 | ✅ done | `TicketDetailController.java:56` |
+| GET | `/ticket/{ticketId}/detail/{detailId}/order` | `TicketDetailController.OrderByUserAsync` | TASK-011 | ✅ done (raw `true`) | `TicketDetailController.java:71` (raw bool, quirk preserved) |
+| GET | `/ticket/ping/java` | `TicketDetailController.PingAsync` | TASK-011 | ✅ done (1s sleep) | `TicketDetailController.java:23` |
+| GET | `/order/1/list` | `OrderController` | TASK-012 | pending | Java TBD |
+| GET | `/order/1/list/page` | `OrderController` | TASK-012 | pending | Java TBD |
+| GET | `/order/{userId}/{orderNumber}` | `OrderController` | TASK-012 | pending | Java TBD |
+| POST | `/order/cas` | `OrderController` | TASK-013 | pending | Java TBD |
+| PUT | `/order/{userId}/{orderNumber}/cancel` | `OrderController` | TASK-014 | pending | Java TBD |
+| POST | `/api/bookings` | `BookingController` | TASK-020 | pending | Java TBD |
+| GET | `/hello/hi`, `/hello/hi/v1`, `/hello/circuit/breaker` | `HiController` | TASK-020 | pending | Java TBD |
+| POST | `/api/v1/secure/data`, `GET /api/v1/secure/info` | `SecureApiController` | TASK-020 | pending | Java TBD |
+| POST | `/employee/sign-in`, `GET /employee/month/{yyyyMM}` | `EmployeeController` | TASK-019 | pending | Java TBD |
+| POST | `/payment/create`, `GET /payment/callback` | `PaymentController` | TASK-018 | pending | Java TBD |
+
+Health & infra:
+
+| Method | Route | Handler | Source |
+|--------|-------|---------|--------|
+| GET | `/health` | minimal API | `Program.cs` (TASK-009; expanded in TASK-010) |
+| GET | `/metrics` | prometheus-net `MapMetrics` | `Program.cs` |
+| GET | `/swagger`, `/swagger/index.html` | Swashbuckle (dev only) | `Program.cs` |

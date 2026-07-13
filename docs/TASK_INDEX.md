@@ -23,7 +23,7 @@
 | TASK-008 | application_scaffold | application | done | — | — | 2026-07-13 | 9 service interfaces (Ticket, Order, OrderMQ, Payment, Booking, Employee, Event) |
 | TASK-009 | api_foundation | api | done | — | — | 2026-07-13 | Program.cs DI + Serilog + Prometheus /metrics + OutboxPublisherWorker stub |
 | TASK-010 | observability | api | done | — | — | 2026-07-13 | prometheus-net, Serilog request logging, /metrics, /health + ArchitectureTests (5 NetArchTest rules) |
-| TASK-011 | catalog_ticket_slice | catalog | pending | — | — | — | Implement TicketAppServiceImpl (Java TicketAppServiceImpl) |
+| TASK-011 | catalog_ticket_slice | catalog | done | `f_task_011_catalog_ticket_slice` | — | 2026-07-13 | Ticket + TicketDetail CRUD + L1/L2 cache + warmup worker — 8 unit tests pass, smoke parity OK |
 | TASK-012 | order_read_slice | catalog | pending | — | — | — | Dapper dynamic table for ticket_order_yyyyMM (list / paged / findByOrderNumber) |
 | TASK-013 | order_cas_slice | order | pending | — | — | — | Redis Lua atomic decrement + DB safety net (decreaseStockLevel3CAS / placeOrderCAS) |
 | TASK-014 | order_cancel_slice | order | pending | — | — | — | Distributed lock + DB status update + Redis restore |
@@ -58,22 +58,39 @@
 | TASK-008 | application_scaffold | 2026-07-13 | 9 service interfaces in `FlashSale.Application.Services`. |
 | TASK-009 | api_foundation | 2026-07-13 | `Program.cs` DI, Kestrel :5080, Serilog, Prometheus `/metrics`, `OutboxPublisherWorker` stub. |
 | TASK-010 | observability | 2026-07-13 | Prometheus-net, Serilog request logging, `/health`, plus 5 NetArchTest dependency-direction tests enforcing the architecture graph. |
+| TASK-011 | catalog_ticket_slice | 2026-07-13 | `TicketAppServiceImpl` + `TicketDetailAppServiceImpl` (Java parity) + `ITicketDomainService`/`TicketDomainServiceImpl` + EF Core `TicketRepositoryImpl` + `TicketDetailRepositoryImpl` (FOR UPDATE CAS) + `ITicketCacheService` + `ITicketDetailCacheService` (2-tier L1 Memory + L2 Redis) + `WarmupDataWorker` (BackgroundService, 5s startup delay, 24h cadence) + `TicketController` (7 endpoints) + `TicketDetailController` (3 endpoints incl. `/ticket/ping/java`) + `TicketMapper`. 8 unit tests pass (Moq TicketRepo + CacheService). Program.cs DI swaps `TicketAppServiceStub`/`TicketDetailAppServiceStub` → real impls, registers `IMemoryCache`. `TicketDto` extended with `PriceOriginal/PriceFlash/StockInitial/StockAvailable` (enriched from first TicketDetail — mirrors Java). `environment/mysql/init/01-schema.sql` for ticket + ticket_item tables. 12 smoke endpoints all return 200 + correct JSON. See also `KNOWN_DIFFERENCES.md` entry 2 (status default), 3 (Ping returns `{"status":"OK"}` not ResultMessage). |
 
 ## Definition of Done (per task)
 
 ```
-[x] dotnet build FlashSale.slnx                    0 error
-[x] dotnet test tests/FlashSale.UnitTests          green
-[x] dotnet test tests/FlashSale.ArchitectureTests  green
-[x] No hard-coded secrets / connection strings
-[x] Workers: idempotent, explicit Ack/Nack
-[x] Message chain: CorrelationId propagated
-[x] TASK_INDEX.md: status=done, branch, commit
-[x] FLASH_SALE_ARCHITECTURE.md updated (if API/DB changed)
-[x] INTERNAL_ARCHITECTURE.md updated (if entity/worker added)
-[x] KNOWN_DIFFERENCES.md updated (if behaviour diverges)
-[x] Commit: [TASK-XXX] slug: mô tả ngắn
-[x] Suggested commit printed — NEVER auto-commit
+[ ] dotnet build FlashSale.slnx                    0 error
+[ ] dotnet test tests/FlashSale.UnitTests          green
+[ ] dotnet test tests/FlashSale.ArchitectureTests  green
+[ ] No hard-coded secrets / connection strings
+[ ] Workers: idempotent, explicit Ack/Nack
+[ ] Message chain: CorrelationId propagated
+[ ] TASK_INDEX.md: status=done, branch, commit
+[ ] FLASH_SALE_ARCHITECTURE.md updated (if API/DB changed)
+[ ] INTERNAL_ARCHITECTURE.md updated (if entity/worker added)
+[ ] KNOWN_DIFFERENCES.md updated (if behaviour diverges)
+[ ] Commit: [TASK-XXX] slug: mô tả ngắn
+[ ] Suggested commit printed — NEVER auto-commit
+```
+
+Per-task checklist (paste into PR description or commit body):
+
+```
+[TASK-XXX] YYYY-MM-DD
+[x] build        0 error / 0 warning
+[x] unit tests   N/N pass
+[x] arch tests   green
+[x] secrets      none hard-coded
+[x] workers      idempotent + ack
+[x] correlation  propagated end-to-end
+[x] index        TASK_INDEX.md row updated
+[x] arch doc     FLASH_SALE_ARCHITECTURE.md §10 endpoints table (if changed)
+[x] internal     INTERNAL_ARCHITECTURE.md §11 status (if changed)
+[x] diffs        KNOWN_DIFFERENCES.md entry added (if any)
 ```
 
 ## How to update

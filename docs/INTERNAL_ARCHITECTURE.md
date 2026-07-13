@@ -94,7 +94,13 @@ src/
 │   │   ├── IRedisInfrasService.cs        # StackExchange.Redis abstraction
 │   │   ├── RedisInfrasService.cs
 │   │   ├── IStockOrderCacheService.cs    # Lua atomic decrement contract
-│   │   └── StockOrderCacheService.cs     # concrete (stub for now, Lua in TASK-013)
+│   │   ├── StockOrderCacheService.cs     # concrete (stub for now, Lua in TASK-013)
+│   │   ├── ITicketCacheService.cs        # PRO_TICKET:{id} Redis cache (TASK-011)
+│   │   ├── TicketCacheService.cs         # concrete (TASK-011)
+│   │   └── TicketDetailCacheService.cs   # 2-tier L1 Memory + L2 Redis (TASK-011)
+│   ├── Persistence/
+│   │   ├── Repositories/TicketRepositoryImpl.cs        # EF Core Ticket (TASK-011)
+│   │   └── Repositories/TicketDetailRepositoryImpl.cs  # EF Core TicketDetail + FOR UPDATE CAS (TASK-011)
 │   ├── DistributedLock/
 │   │   ├── IDistributedLock.cs
 │   │   └── RedLockDistributedLockProvider.cs  # stub now, RedLock impl in TASK-006
@@ -107,11 +113,14 @@ src/
 │
 └── FlashSale.Api/
     ├── Program.cs                          # DI wiring, Kestrel :5080, Serilog, /metrics
-    ├── Stubs.cs                            # NotImplementedException stubs for scaffold
+    ├── Stubs.cs                            # NotImplementedException stubs for not-yet-ported slices
     ├── Workers/
     │   ├── KafkaOrderConsumerWorker.cs     # BackgroundService — concrete in TASK-016
-    │   └── OutboxPublisherWorker.cs        # BackgroundService — concrete in TASK-017
-    ├── Controllers/                        # (added per TASK-011..020)
+    │   ├── OutboxPublisherWorker.cs        # BackgroundService — concrete in TASK-017
+    │   └── WarmupDataWorker.cs             # BackgroundService — Redis cache warmup (TASK-011)
+    ├── Controllers/                        # added per TASK-011..020
+    │   ├── TicketController.cs             # 7 endpoints (TASK-011)
+    │   └── TicketDetailController.cs       # 3 endpoints incl. /ticket/ping/java (TASK-011)
     ├── Middleware/                         # CorrelationId (TASK-010)
     ├── appsettings.json
     └── appsettings.Development.json
@@ -231,5 +240,19 @@ Each log line includes `RequestId` (auto via `UseSerilogRequestLogging`) and
 
 ## 11. Status
 
-Scaffold phase complete. Each entity / interface / stub is in place. Next task
-(TASK-011) begins replacing `TicketAppServiceStub` with `TicketAppServiceImpl`.
+| Slice | Task | Status |
+|-------|------|--------|
+| Catalog (Ticket CRUD + L1/L2 cache) | TASK-011 | ✅ done (2026-07-13) |
+| Order read (Dapper dynamic table) | TASK-012 | pending |
+| Order CAS (Redis Lua + DB safety net) | TASK-013 | pending |
+| Order cancel (distributed lock) | TASK-014 | pending |
+| OrderMQ producer | TASK-015 | pending |
+| OrderMQ consumer | TASK-016 | pending |
+| OrderMQ publisher (outbox drain) | TASK-017 | pending |
+| Payment VNPay | TASK-018 | pending |
+| Employee timesheet | TASK-019 | pending |
+| Booking demo + hi + secure | TASK-020 | pending |
+
+Stubs remain in `Stubs.cs` for the slices not yet ported. Each TASK-XXX lands by
+swapping one stub for its concrete impl + adding the matching controller +
+worker + tests.

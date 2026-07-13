@@ -1,0 +1,64 @@
+using FlashSale.Application.Services;
+using FlashSale.Infrastructure.Cache;
+
+namespace FlashSale.Api.Workers;
+
+/// <summary>
+/// Cache warmup worker — mirrors Java WarmupDataBeforeEvent:
+///   - On startup: hydrate Redis with stock_available/price_flash for all active tickets.
+///   - Daily at 00:00 (server local): re-hydrate so flash-sale resets the clock.
+///
+/// Scheduled cadence is decided here (24h) rather than via cron expression to keep the
+/// scaffold dependency-light. A cron parser can be swapped in later if needed.
+/// </summary>
+public sealed class WarmupDataWorker : BackgroundService
+{
+    private static readonly TimeSpan DailyInterval = TimeSpan.FromHours(24);
+
+    private readonly IStockOrderCacheService _stockCache;
+    private readonly ILogger<WarmupDataWorker> _log;
+    private readonly TimeSpan _startupDelay = TimeSpan.FromSeconds(5);
+
+    public WarmupDataWorker(
+        IStockOrderCacheService stockCache,
+        ILogger<WarmupDataWorker> log)
+    {
+        _stockCache = stockCache;
+        _log = log;
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        // Boot delay so MySQL is ready before we query
+        try { await Task.Delay(_startupDelay, stoppingToken); }
+        catch (OperationCanceledException) { return; }
+
+        // Initial load
+        await WarmupOnceAsync(stoppingToken);
+
+        // Daily loop
+        using var timer = new PeriodicTimer(DailyInterval);
+        try
+        {
+            while (await timer.WaitForNextTickAsync(stoppingToken))
+                await WarmupOnceAsync(stoppingToken);
+        }
+        catch (OperationCanceledException) { /* graceful shutdown */ }
+    }
+
+    private async Task WarmupOnceAsync(CancellationToken ct)
+    {
+        try
+        {
+            _log.LogInformation("WarmupDataBeforeEvent — hydrating Redis at {Ts:O}", DateTimeOffset.UtcNow);
+            // Java seeds ticket id 4 as a representative sample; the full active-set hydration
+            // is added in TASK-013 when the StockOrderAppService learns all active tickets.
+            await _stockCache.AddStockAvailableToCacheAsync(4L, ct);
+            _log.LogInformation("WarmupDataBeforeEvent — completed at {Ts:O}", DateTimeOffset.UtcNow);
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Warmup failed; will retry on next tick");
+        }
+    }
+}

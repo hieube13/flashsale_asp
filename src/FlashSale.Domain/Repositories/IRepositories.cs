@@ -15,6 +15,7 @@ public interface ITicketDetailRepository
 {
     Task<TicketDetail?> GetByIdAsync(long id, CancellationToken ct = default);
     Task<TicketDetail?> GetForUpdateAsync(long id, CancellationToken ct = default);
+    Task<IReadOnlyList<TicketDetail>> FindByActivityIdAsync(long activityId, CancellationToken ct = default);
     Task<TicketDetail> AddAsync(TicketDetail detail, CancellationToken ct = default);
     Task UpdateAsync(TicketDetail detail, CancellationToken ct = default);
     Task IncreaseStockAsync(long id, int quantity, CancellationToken ct = default);
