@@ -13,6 +13,7 @@ using FlashSale.Infrastructure.DistributedLock;
 using FlashSale.Infrastructure.External;
 using FlashSale.Infrastructure.Messaging;
 using FlashSale.Infrastructure.Persistence.Repositories;
+using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using Prometheus;
 using Serilog;
@@ -48,6 +49,13 @@ builder.Services.AddSingleton<IRedisInfrasService, RedisInfrasService>();
 builder.Services.AddSingleton<IStockOrderCacheService, StockOrderCacheService>();
 
 // ---- Distributed lock ----
+// The RedLockFactory is constructed from the existing IConnectionMultiplexer
+// (single Redis box in dev). The builder lives in Infrastructure so the API
+// project does not need to know about RedLockNet internals.
+builder.Services.AddSingleton<RedLockNet.IDistributedLockFactory>(sp =>
+    RedLockFactoryBuilder.Build(
+        sp.GetRequiredService<StackExchange.Redis.IConnectionMultiplexer>(),
+        sp.GetRequiredService<ILoggerFactory>().CreateLogger("RedLockFactory")));
 builder.Services.AddSingleton<IDistributedLockProvider, RedLockDistributedLockProvider>();
 
 // ---- Kafka ----

@@ -32,14 +32,33 @@ public class TicketOrderAppServiceImplTests
     private static Mock<IOrderDeductionDomainService> Domain() => new(MockBehavior.Strict);
     private static Mock<ITicketDetailRepository> DetailRepo() => new(MockBehavior.Strict);
     private static Mock<IStockOrderCacheService> StockCache() => new(MockBehavior.Strict);
+    private static Mock<IDistributedLockProvider> LockProvider() => new(MockBehavior.Strict);
 
     private static TicketOrderAppServiceImpl Build(
         Mock<ITickerOrderRepository> orders,
         Mock<IOrderDeductionDomainService> domain,
         Mock<ITicketDetailRepository> details,
-        Mock<IStockOrderCacheService> stockCache)
+        Mock<IStockOrderCacheService> stockCache,
+        Mock<IDistributedLockProvider>? lockProvider = null)
         => new(orders.Object, domain.Object, details.Object, stockCache.Object,
+               (lockProvider ?? LockProvider()).Object,
                NullLogger<TicketOrderAppServiceImpl>.Instance);
+
+    /// <summary>
+    /// Helper to stand up a working lock provider that always grants
+    /// the lock immediately (used by happy-path cancel tests).
+    /// </summary>
+    private static Mock<IDistributedLockProvider> GrantedLockProvider()
+    {
+        var provider = new Mock<IDistributedLockProvider>(MockBehavior.Strict);
+        var handle = new Mock<IDistributedLock>(MockBehavior.Strict);
+        handle.Setup(h => h.TryAcquireAsync(It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
+              .ReturnsAsync(true);
+        handle.Setup(h => h.ReleaseAsync(It.IsAny<CancellationToken>()))
+              .Returns(Task.CompletedTask);
+        provider.Setup(p => p.GetLock(It.IsAny<string>())).Returns(handle.Object);
+        return provider;
+    }
 
     // ============== TASK-012: read slice ==============
 

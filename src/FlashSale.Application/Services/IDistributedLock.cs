@@ -1,4 +1,4 @@
-namespace FlashSale.Infrastructure.DistributedLock;
+namespace FlashSale.Application.Services;
 
 /// <summary>
 /// Distributed lock abstraction — wraps RedLock.net / Redisson equivalent.

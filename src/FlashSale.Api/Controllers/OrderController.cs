@@ -197,4 +197,47 @@ public sealed class OrderController : ControllerBase
             ticketId, quantity, userId);
         return Task.FromResult(ResultMessage<bool>.Error(501, "TASK-015: order MQ producer not implemented"));
     }
+
+    // ============== TASK-014: order cancel slice ==============
+
+    /// <summary>
+    /// PUT /order/{userId}/{orderNumber}/cancel — cancel an order under a
+    /// distributed lock. Mirrors Java TicketOrderController.cancelOrder
+    /// (<c>@PutMapping("/{userId}/{orderNumber}/cancel")</c>) and Java
+    /// TicketOrderAppServiceImpl.cancelOrder lines 439-511.
+    /// <para>
+    /// HTTP status is always <c>200</c>; the body's <c>success</c> field
+    /// indicates whether the cancel succeeded (lock acquired, ownership
+    /// matched, status flipped to CANCELLED, stock restored). This matches
+    /// <c>KNOWN_DIFFERENCES.md</c> §4 (success-failure both return 200).
+    /// </para>
+    /// </summary>
+    [HttpPut("{userId:long}/{orderNumber}/cancel")]
+    public async Task<ResultMessage<bool>> CancelOrderAsync(
+        long userId,
+        string orderNumber,
+        CancellationToken ct)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(orderNumber))
+                return ResultMessage<bool>.Error(400, "orderNumber is required");
+            var ok = await _service.CancelOrderAsync(userId, orderNumber, ct);
+            if (ok)
+                return ResultMessage<bool>.Data(true, "Cancel order successfully");
+            // Either lock-busy, order not found, ownership mismatch, or status
+            // update failure. Keep status 200 to match Java semantics.
+            return ResultMessage<bool>.Data(false, "Cancel order failed");
+        }
+        catch (ArgumentException ex)
+        {
+            _log.LogWarning("cancelOrder validation: {Msg}", ex.Message);
+            return ResultMessage<bool>.Error(400, ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "cancelOrder failed for userId={UserId} orderNumber={OrderNumber}", userId, orderNumber);
+            return ResultMessage<bool>.Error(500, "Internal error");
+        }
+    }
 }

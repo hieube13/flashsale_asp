@@ -1,5 +1,5 @@
+using FlashSale.Application.Services;
 using FlashSale.Domain.Repositories;
-using FlashSale.Infrastructure.DistributedLock;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
