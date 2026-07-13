@@ -1,0 +1,17 @@
+bin/
+obj/
+.vs/
+*.user
+*.suo
+.vscode/
+.idea/
+.env
+.env.local
+node_modules/
+.git/
+.gitignore
+README.md
+docker-compose.yml
+Dockerfile
+**/*.trx
+**/*.coverage

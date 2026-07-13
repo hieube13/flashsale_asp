@@ -1,0 +1,28 @@
+bin/
+obj/
+.vs/
+*.user
+*.suo
+.vscode/
+.idea/
+
+# Test results
+TestResults/
+coverage/
+*.trx
+*.coverage
+.coverage
+
+# Secrets / env
+.env
+.env.local
+appsettings.*.local.json
+
+# Build artifacts
+artifacts/
+publish/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
