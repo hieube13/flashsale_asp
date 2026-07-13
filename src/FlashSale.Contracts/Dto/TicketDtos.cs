@@ -10,7 +10,12 @@ public sealed record TicketDto(
     string? Description,
     DateTime StartTime,
     DateTime EndTime,
-    int Status);
+    int Status,
+    // Enriched from the first TicketDetail row (mirrors Java TicketAppServiceImpl.getTicketById)
+    decimal? PriceOriginal = null,
+    decimal? PriceFlash = null,
+    int? StockInitial = null,
+    int? StockAvailable = null);
 
 public sealed record TicketDetailDto(
     long Id,
