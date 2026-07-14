@@ -1,7 +1,6 @@
 using FlashSale.Application.Services;
 using FlashSale.Contracts.Dto;
 using FlashSale.Domain.Entities;
-using Microsoft.AspNetCore.Http;
 
 namespace FlashSale.Api.Stubs;
 
@@ -15,7 +14,8 @@ namespace FlashSale.Api.Stubs;
 ///   TASK-016: OrderMQ consumer (IOrderMqConsumerHandler)
 ///   TASK-018: PAYMENT (IPaymentAppService) — DONE: real impl in
 ///     FlashSale.Application.Services.Implementations.PaymentAppServiceImpl
-///   TASK-019: Employee timesheet (IEmployeeCacheService)
+///   TASK-019: EMPLOYEE TIMSHEET (IEmployeeCacheService) — DONE: real impl in
+///     FlashSale.Application.Services.Implementations.EmployeeCacheServiceImpl
 ///   TASK-020: Booking (IBookingAppService)
 /// </summary>
 
@@ -39,16 +39,6 @@ public sealed class TicketDetailAppServiceStub : ITicketDetailAppService
 public sealed class BookingAppServiceStub : IBookingAppService
 {
     public Task<BookingDto> CreateAsync(CreateBookingRequest request, CancellationToken ct = default) => throw new NotImplementedException();
-}
-
-public sealed class EmployeeCacheServiceStub : IEmployeeCacheService
-{
-    public Task SignInAsync(string userId, CancellationToken ct = default) => throw new NotImplementedException();
-    public Task SignInOnDateAsync(string userId, DateTime date, CancellationToken ct = default) => throw new NotImplementedException();
-    public Task<bool> HasSignedInAsync(string userId, DateTime date, CancellationToken ct = default) => throw new NotImplementedException();
-    public Task<long> GetMonthlyCountAsync(string userId, DateTime month, CancellationToken ct = default) => throw new NotImplementedException();
-    public Task<int> GetFirstSignDayAsync(string userId, DateTime month, CancellationToken ct = default) => throw new NotImplementedException();
-    public Task<int> GetConsecutiveDaysAsync(string userId, DateTime date, CancellationToken ct = default) => throw new NotImplementedException();
 }
 
 public sealed class EventAppServiceStub : IEventAppService

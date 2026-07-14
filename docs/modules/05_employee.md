@@ -48,7 +48,7 @@ For `consecutive-days`, iterate backward from `dayOfMonth - 1` until a 0 is foun
 
 ## Tasks
 
-- **TASK-019**: employee_timesheet — port all 8 endpoints
+- **TASK-019**: employee_timesheet — port all 8 endpoints (done 2026-07-14)
 
 ## Why BitSet?
 
@@ -61,4 +61,8 @@ For `consecutive-days`, iterate backward from `dayOfMonth - 1` until a 0 is foun
 
 - Java uses `RBitSet` (Redisson). StackExchange.Redis uses native Redis BITSET ops (same underlying mechanism).
 - Java: `int offset = date.getDayOfMonth() - 1` (0-based). .NET: same convention.
-- Java returns `Map<String, Object>` for `monthly-sign-details` and `summary`. .NET uses `Dictionary<string, object>`.
+- Java returns `Map<String, Object>` for `monthly-sign-details` and `summary`. .NET uses typed DTOs (`MonthlySignDetailsDto`, `EmployeeSummaryDto`).
+- Java uses JVM default timezone via `LocalDate`; .NET pins UTC to keep keys stable across a multi-pod fleet (KNOWN_DIFFERENCES §21).
+- Java `getFirstSignDay` scans bits 0..30 unconditionally (would return phantom 30/31 in February); .NET scans only 0..lengthOfMonth-1 (KNOWN_DIFFERENCES §22).
+- Java `getConsecutiveDays` walks back within the same month only. .NET matches — no cross-month look-up (KNOWN_DIFFERENCES §23).
+- Java endpoints are open (no auth). .NET mirrors (KNOWN_DIFFERENCES §25).

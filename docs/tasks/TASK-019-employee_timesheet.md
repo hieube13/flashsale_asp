@@ -2,12 +2,12 @@
 
 | Field | Value |
 |-------|-------|
-| Status | 🟡 pending |
+| Status | 🟢 done |
 | Branch | `f_task_019_employee_timesheet` |
 | Module | employee |
 | Phase | 1 — Feature port |
 | Commit | — |
-| Completed | — |
+| Completed | 2026-07-14 |
 
 ## Mục tiêu
 
@@ -20,8 +20,10 @@ Port Employee timesheet dùng Redis BitSet. Monthly attendance bitmap.
 
 ## File .NET đích (sẽ tạo)
 
-- `src/FlashSale.Application/Services/Implementations/EmployeeCacheServiceImpl.cs` — use `IDatabase.StringSetBitAsync` / `StringGetBitAsync`
+- `src/FlashSale.Application/Services/IEmployeeCacheService.cs` — moved from `IBookingAppService.cs`, extended with `GetMonthlySignDetailsAsync` + `GetSummaryAsync`. Adds 2 new DTOs (`MonthlySignDetailsDto`, `EmployeeSummaryDto`).
+- `src/FlashSale.Application/Services/Implementations/EmployeeCacheServiceImpl.cs` — uses `IDatabase.StringSetBitAsync` / `StringGetBitAsync` / `StringBitCountAsync`
 - `src/FlashSale.Api/Controllers/EmployeeController.cs`
+- `src/FlashSale.Infrastructure/Cache/EmployeeBitSetService.cs` — abstraction wrapper so Application doesn't reach into StackExchange.Redis directly
 
 ## Redis BitSet in StackExchange.Redis
 
