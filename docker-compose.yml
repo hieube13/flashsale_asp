@@ -1,12 +1,13 @@
 version: "3.9"
 
 services:
-  # API runs alongside Java (port 1122). Cutover via nginx routing — see docs/CUTOVER.md (TASK-022).
   flashsale.api:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: flashsale.api
+    expose:
+      - "5080"
     ports:
       - "5080:5080"
     environment:
@@ -24,6 +25,24 @@ services:
         condition: service_healthy
       kafka:
         condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - flashsale-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: flashsale.fe
+    ports:
+      - "5173:80"
+    depends_on:
+      - flashsale.api
     networks:
       - flashsale-net
 

@@ -2,12 +2,12 @@
 
 | Field | Value |
 |-------|-------|
-| Status | pending |
+| Status | **done** |
 | Branch | `f_task_023_frontend_migrate` |
 | Module | frontend |
 | Phase | 3 — Frontend port (sau khi backend Phase 1 done) |
 | Commit | — |
-| Completed | — |
+| Completed | **2026-07-14** |
 
 ## Mục tiêu
 
