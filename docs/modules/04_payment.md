@@ -13,8 +13,9 @@
 
 | Method | Route | Behaviour |
 |--------|-------|-----------|
-| POST | `/payment/create?userId=&orderNumber=&method=VNPAY` | Create payment transaction, return VNPay redirect URL |
-| POST | `/payment/vnpay/callback` | VNPay IPN callback (verify signature, update status) |
+| POST | `/payment/create` | Body `CreatePaymentRequest{userId, orderNumber, method}` → `ResultMessage<PaymentUrlResponse>` with HMAC-signed VNPay URL in `data.paymentUrl`. Idempotent (reuses existing PENDING row). |
+| GET  | `/payment/callback/return` | Browser return URL — renders minimal HTML, NOT authoritative. |
+| POST | `/payment/callback/ipn` | Server-to-server IPN webhook (form-encoded). HTTP 200 + JSON `{RspCode, Message}` per VNPay spec. RedLock-protected per `txnRef`. |
 
 ## Algorithms
 

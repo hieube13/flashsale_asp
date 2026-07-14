@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS outbox_event (
   KEY idx_status_created (Status, CreatedAt)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 8. idempotency_key — consumer gate chống Kafka retry duplicate (TASK-016).
+-- 9. idempotency_key — consumer gate chống Kafka retry duplicate (TASK-016).
 -- Mirrors Java idempotency_key (lines 162-167 of ticket_init.sql) with
 -- PascalCase columns to match EF Core / Pomelo MySQL convention.
 CREATE TABLE IF NOT EXISTS idempotency_key (
@@ -99,4 +99,29 @@ CREATE TABLE IF NOT EXISTS idempotency_key (
   ExpiresAt  DATETIME    NOT NULL COMMENT 'TTL — dùng cho cleanup job',
   PRIMARY KEY (Token),
   KEY idx_idempotency_expires (ExpiresAt)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 10. payment_transaction — VNPay payment records (TASK-018).
+-- Mirrors Java payment_transaction with PascalCase columns to match
+-- EF Core / Pomelo MySQL convention. PaymentStatus values:
+--   0=INIT, 1=IN_PROGRESS, 2=SUCCESS, 3=FAILED.
+-- Amount stored as DECIMAL(16,3) for fractional VND safety; gateway
+-- multiplies by 100 and rounds to long when signing the URL.
+CREATE TABLE IF NOT EXISTS payment_transaction (
+  Id                    BIGINT NOT NULL AUTO_INCREMENT,
+  PaymentId             VARCHAR(64) NOT NULL COMMENT '= vnp_TxnRef (Guid.NewGuid("N"))',
+  OrderNumber           VARCHAR(50) NOT NULL,
+  UserId                INT NOT NULL,
+  Amount                DECIMAL(16,3) NOT NULL,
+  PaymentMethod         VARCHAR(20) NOT NULL,
+  PaymentStatus         TINYINT NOT NULL DEFAULT 0,
+  GatewayTransactionId  VARCHAR(64) NULL COMMENT 'vnp_TransactionNo on SUCCESS',
+  PaymentUrl            TEXT NULL,
+  UpdatedAt             DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CreatedAt             DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (Id),
+  UNIQUE KEY uk_payment_payment_id (PaymentId),
+  KEY idx_payment_order (OrderNumber),
+  KEY idx_payment_order_status (OrderNumber, PaymentStatus),
+  KEY idx_payment_user (UserId)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

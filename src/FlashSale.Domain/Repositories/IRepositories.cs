@@ -60,6 +60,19 @@ public interface IPaymentRepository
     Task UpdateInProgressAsync(string paymentId, string paymentUrl, CancellationToken ct = default);
     Task<PaymentTransaction?> GetByPaymentIdAsync(string paymentId, CancellationToken ct = default);
     Task UpdateStatusAsync(string paymentId, int status, string? gatewayTxId, CancellationToken ct = default);
+
+    /// <summary>
+    /// TASK-018 — load every PaymentTransaction row bound to <paramref name="orderNumber"/>.
+    /// Used by <c>PaymentAppServiceImpl.BuildAndPersistPaymentAsync</c> to honor
+    /// idempotency when a (userId, orderNumber) pair already has a PENDING row.
+    /// </summary>
+    Task<IReadOnlyList<PaymentTransaction>> FindByOrderNumberAsync(string orderNumber, CancellationToken ct = default);
+
+    /// <summary>
+    /// TASK-018 — recover amount from the appropriate <c>ticket_order_{yyyyMM}</c>
+    /// shard for the given <paramref name="orderNumber"/>. Returns 0m when not found.
+    /// </summary>
+    Task<decimal> GetOrderAmountAsync(string orderNumber, CancellationToken ct = default);
 }
 
 public interface IBookingRepository

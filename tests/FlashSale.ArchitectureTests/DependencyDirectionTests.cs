@@ -16,7 +16,7 @@ namespace FlashSale.ArchitectureTests;
 /// </summary>
 public class DependencyDirectionTests
 {
-    private static readonly Assembly Api = typeof(PaymentAppServiceStub).Assembly;
+    private static readonly Assembly Api = typeof(FlashSale.Api.Controllers.OrderMQController).Assembly;
     private static readonly Assembly Application = typeof(ITicketAppService).Assembly;
     private static readonly Assembly Infrastructure = typeof(IRedisInfrasService).Assembly;
     private static readonly Assembly Domain = typeof(Domain.Entities.Ticket).Assembly;

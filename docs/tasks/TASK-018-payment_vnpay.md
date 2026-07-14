@@ -2,12 +2,12 @@
 
 | Field | Value |
 |-------|-------|
-| Status | 🟡 pending |
+| Status | 🟢 done |
 | Branch | `f_task_018_payment_vnpay` |
 | Module | payment |
 | Phase | 1 — Feature port |
 | Commit | — |
-| Completed | — |
+| Completed | 2026-07-14 |
 
 ## Mục tiêu
 
@@ -45,8 +45,9 @@ Hardcoded literal `"SECRET"` instead of the constant `SECRET_KEY`.
 
 | Method | Route | Behaviour |
 |--------|-------|-----------|
-| POST | `/payment/create?userId=&orderNumber=&method=VNPAY` | Build VNPay URL, insert PaymentTransaction(IN_PROGRESS), return URL |
-| POST | `/payment/vnpay/callback` (or `/payment/callback`) | Verify signature, update status to SUCCESS/FAILED |
+| POST | `/payment/create` | Body `CreatePaymentRequest{userId, orderNumber, method}` → `ResultMessage<PaymentUrlResponse>` with HMAC-signed VNPay URL in `data.paymentUrl`. Idempotent (reuses existing PENDING row if present). |
+| GET  | `/payment/callback/return` | Return URL hit by the user's browser — renders minimal HTML, NOT authoritative. |
+| POST | `/payment/callback/ipn` | Server-to-server VNPay IPN. Body `application/x-www-form-urlencoded`. Response: HTTP 200 + JSON `{RspCode, Message}` per VNPay spec. RspCode: 00=Confirm Success, 01=Order not found, 02=Order already confirmed (lock-busy), 04=Invalid amount, 97=Invalid Signature. RedLock-protected per `txnRef`. |
 
 ## Acceptance criteria
 

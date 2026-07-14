@@ -1,7 +1,7 @@
 using FlashSale.Application.Services;
 using FlashSale.Contracts.Dto;
-using FlashSale.Contracts.Messages;
 using FlashSale.Domain.Entities;
+using Microsoft.AspNetCore.Http;
 
 namespace FlashSale.Api.Stubs;
 
@@ -13,7 +13,8 @@ namespace FlashSale.Api.Stubs;
 ///   TASK-014: Order cancel slice (ITicketOrderAppService.CancelOrderAsync)
 ///   TASK-015: OrderMQ producer (IOrderMqAppService)
 ///   TASK-016: OrderMQ consumer (IOrderMqConsumerHandler)
-///   TASK-018: Payment (IPaymentAppService)
+///   TASK-018: PAYMENT (IPaymentAppService) — DONE: real impl in
+///     FlashSale.Application.Services.Implementations.PaymentAppServiceImpl
 ///   TASK-019: Employee timesheet (IEmployeeCacheService)
 ///   TASK-020: Booking (IBookingAppService)
 /// </summary>
@@ -33,12 +34,6 @@ public sealed class TicketDetailAppServiceStub : ITicketDetailAppService
 {
     public Task<TicketDetailDto> GetByIdAsync(long detailId, long? version, CancellationToken ct = default) => throw new NotImplementedException();
     public Task<bool> OrderByUserAsync(long detailId, CancellationToken ct = default) => throw new NotImplementedException();
-}
-
-public sealed class PaymentAppServiceStub : IPaymentAppService
-{
-    public Task<string> CreatePaymentUrlAsync(long userId, string orderNumber, string method, CancellationToken ct = default) => throw new NotImplementedException();
-    public Task HandleCallbackAsync(IDictionary<string, string> vnpParams, CancellationToken ct = default) => throw new NotImplementedException();
 }
 
 public sealed class BookingAppServiceStub : IBookingAppService

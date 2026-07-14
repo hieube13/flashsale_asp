@@ -14,6 +14,7 @@ using FlashSale.Infrastructure.External;
 using FlashSale.Infrastructure.Messaging;
 using FlashSale.Infrastructure.Persistence;
 using FlashSale.Infrastructure.Persistence.Repositories;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Prometheus;
@@ -27,6 +28,15 @@ builder.Host.UseSerilog((ctx, lc) =>
     lc.ReadFrom.Configuration(ctx.Configuration)
       .Enrich.FromLogContext()
       .WriteTo.Console());
+
+// ---- Forwarded headers (q2 — VnPay vnp_IpAddr trusts X-Forwarded-For from nginx) ----
+builder.Services.Configure<ForwardedHeadersOptions>(o =>
+{
+    o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    // In dev, accept any proxy. In production, lock this down to known CIDR.
+    o.KnownNetworks.Clear();
+    o.KnownProxies.Clear();
+});
 
 // ---- Kestrel / port 5080 (Java dùng 1122) ----
 builder.WebHost.ConfigureKestrel(opts =>
@@ -81,6 +91,7 @@ builder.Services.AddScoped<ITickerOrderRepository, TickerOrderRepositoryImpl>();
 builder.Services.AddScoped<IOrderQueueRepository, OrderQueueRepositoryImpl>();
 builder.Services.AddScoped<IOutboxEventRepository, OutboxEventRepositoryImpl>();
 builder.Services.AddScoped<IIdempotencyKeyRepository, IdempotencyKeyRepositoryImpl>();
+builder.Services.AddScoped<IPaymentRepository, PaymentRepositoryImpl>();
 
 // ---- Domain services (Domain) ----
 builder.Services.AddScoped<ITicketDomainService, TicketDomainService>();
@@ -96,13 +107,13 @@ builder.Services.AddScoped<ITicketDetailAppService, TicketDetailAppServiceImpl>(
 builder.Services.AddScoped<ITicketOrderAppService, TicketOrderAppServiceImpl>();
 builder.Services.AddScoped<IOrderMqAppService, OrderMqAppServiceImpl>();
 builder.Services.AddScoped<IOrderMqConsumerHandler, OrderMqConsumerHandlerImpl>();
+builder.Services.AddScoped<IPaymentAppService, PaymentAppServiceImpl>();
 
 // ---- Catalog cache (Infrastructure cache + Application abstraction) ----
 builder.Services.AddScoped<ITicketCacheService, FlashSale.Infrastructure.Cache.TicketCacheService>();
 builder.Services.AddScoped<FlashSale.Application.Services.ITicketDetailCacheService, FlashSale.Infrastructure.Cache.TicketDetailCacheService>();
 
 // ---- Other application services — stubs until later tasks land their real impls ----
-builder.Services.AddScoped<IPaymentAppService, PaymentAppServiceStub>();
 builder.Services.AddScoped<IBookingAppService, BookingAppServiceStub>();
 builder.Services.AddScoped<IEmployeeCacheService, EmployeeCacheServiceStub>();
 builder.Services.AddScoped<IEventAppService, EventAppServiceStub>();
@@ -131,6 +142,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseSerilogRequestLogging();
 app.UseRouting();
+app.UseForwardedHeaders();
 
 // Prometheus /metrics
 app.UseHttpMetrics();
