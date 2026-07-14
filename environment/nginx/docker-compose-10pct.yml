@@ -1,0 +1,33 @@
+# docker-compose-10pct.yml — Phase B: 10% traffic to .NET (24h)
+# 10% of requests routed to .NET, 90% stay on Java.
+#
+# Run:
+#   docker compose -f docker-compose.yml \
+#     -f environment/nginx/docker-compose-10pct.yml up -d
+#
+# Monitor:
+#   open http://localhost:9090  (Prometheus)
+#   open http://localhost:3000  (Grafana)
+#
+# Advance criteria: error rate < 0.1%, p99 < 200ms over 24h
+
+version: "3.9"
+
+services:
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: flashsale.nginx
+    volumes:
+      - ./environment/nginx/nginx-10pct.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "80:80"
+    depends_on:
+      flashsale.api:
+        condition: service_healthy
+    networks:
+      - flashsale-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:80/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3

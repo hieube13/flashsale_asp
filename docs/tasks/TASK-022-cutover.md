@@ -2,12 +2,12 @@
 
 | Field | Value |
 |-------|-------|
-| Status | 🟡 pending |
+| Status | 🟢 done |
 | Branch | `f_task_022_cutover` |
 | Module | ops |
 | Phase | 2 — Hardening |
 | Commit | — |
-| Completed | — |
+| Completed | 2026-07-14 |
 
 ## Mục tiêu
 

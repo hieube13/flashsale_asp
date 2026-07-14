@@ -1,0 +1,33 @@
+# docker-compose-50pct.yml — Phase C: 50% traffic to .NET (48h)
+# Equal split: 50% .NET, 50% Java.
+#
+# Run:
+#   docker compose -f docker-compose.yml \
+#     -f environment/nginx/docker-compose-50pct.yml up -d
+#
+# Advance criteria (48h window):
+#   - Error rate < 0.1%
+#   - MySQL max_pool not exhausted
+#   - Kafka consumer lag < 1000 messages
+#   - p99 latency comparable to Java baseline
+
+version: "3.9"
+
+services:
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: flashsale.nginx
+    volumes:
+      - ./environment/nginx/nginx-50pct.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "80:80"
+    depends_on:
+      flashsale.api:
+        condition: service_healthy
+    networks:
+      - flashsale-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:80/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3

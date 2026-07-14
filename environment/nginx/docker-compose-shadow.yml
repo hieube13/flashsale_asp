@@ -1,0 +1,33 @@
+# docker-compose-shadow.yml — Phase A: Shadow traffic (24h)
+# Mirrors order requests to .NET but returns Java response.
+# Use alongside the base docker-compose.yml.
+#
+# Run:
+#   docker compose -f docker-compose.yml \
+#     -f environment/nginx/docker-compose-shadow.yml up -d
+#
+# Logs diffs:
+#   docker logs -f flashsale.nginx
+#
+# Advance criteria: shadow diff rate < 0.1% over 24h
+
+version: "3.9"
+
+services:
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: flashsale.nginx
+    volumes:
+      - ./environment/nginx/nginx-shadow.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "80:80"
+    depends_on:
+      flashsale.api:
+        condition: service_healthy
+    networks:
+      - flashsale-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:80/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
