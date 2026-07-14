@@ -2,12 +2,12 @@
 
 | Field | Value |
 |-------|-------|
-| Status | pending |
+| Status | done |
 | Branch | `f_task_024_frontend_smoke_e2e` |
 | Module | frontend |
 | Phase | 3 — Frontend verification (chạy sau TASK-023 + tất cả TASK-011..020) |
 | Commit | — |
-| Completed | — |
+| Completed | 2026-07-14 |
 
 ## Mục tiêu
 

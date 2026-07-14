@@ -59,17 +59,17 @@ Mirror of `xxxx.com-18-06-26` (Spring Boot 3.3.5 / Java 21 / DDD modular monolit
 
 | Module | Java package | .NET namespace | Status |
 |--------|--------------|----------------|--------|
-| catalog | `controller.http.TicketController`, `TicketDetailController` | `FlashSale.Api.Controllers.Ticket*` | 🟡 TASK-011 |
+| catalog | `controller.http.TicketController`, `TicketDetailController` | `FlashSale.Api.Controllers.Ticket*` | ✅ TASK-011 |
 | catalog (read) | `TicketOrderAppServiceImpl.findAll/findPage/findByOrderNumber` | `FlashSale.Application.Services.TicketOrderAppServiceImpl` | ✅ TASK-012 |
 | order | `TicketOrderAppServiceImpl.placeOrderCAS` | same | ✅ TASK-013 |
 | order | `cancelOrder` | same | ✅ TASK-014 |
 | order-mq | `OrderMQAppServiceImpl.placeOrderMQ` | `FlashSale.Application.Services.OrderMqAppServiceImpl` | ✅ TASK-015 |
 | order-mq | `KafkaOrderConsumer` | `FlashSale.Api.Workers.KafkaOrderConsumerWorker` | ✅ TASK-016 |
 | order-mq | `OutboxPublisherJob` | `FlashSale.Infrastructure.Messaging.OutboxPublisherWorker` | ✅ TASK-017 |
-| payment | `PaymentController`, `PaymentAppServiceImpl`, `VnPayGatewayServiceImpl` | `FlashSale.Api.Controllers.PaymentController`, `FlashSale.Application.Services.PaymentAppService`, `FlashSale.Infrastructure.External.VnPayGatewayService` | 🟡 TASK-018 |
-| employee | `EmployeeController`, `EmployeeCacheService` | `FlashSale.Api.Controllers.EmployeeController`, `FlashSale.Application.Services.EmployeeCacheService` | 🟡 TASK-019 |
-| booking | `BookingController`, `BookingAppService` | `FlashSale.Api.Controllers.BookingController`, `FlashSale.Application.Services.BookingAppService` | 🟡 TASK-020 |
-| demo | `HiController`, `SecureApiController` | `FlashSale.Api.Controllers.*` | 🟡 TASK-020 |
+| payment | `PaymentController`, `PaymentAppServiceImpl`, `VnPayGatewayServiceImpl` | `FlashSale.Api.Controllers.PaymentController`, `FlashSale.Application.Services.PaymentAppService`, `FlashSale.Infrastructure.External.VnPayGatewayService` | ✅ TASK-018 |
+| employee | `EmployeeController`, `EmployeeCacheService` | `FlashSale.Api.Controllers.EmployeeController`, `FlashSale.Application.Services.EmployeeCacheService` | ✅ TASK-019 |
+| booking | `BookingController`, `BookingAppService` | `FlashSale.Api.Controllers.BookingController`, `FlashSale.Application.Services.BookingAppService` | ✅ TASK-020 |
+| demo | `HiController`, `SecureApiController` | `FlashSale.Api.Controllers.*` | ✅ TASK-020 |
 
 ## 4. Database schema
 
@@ -144,10 +144,9 @@ KafkaOrderConsumerWorker:
 
 ## 9. Current state
 
-Phase 0 (TASK-001..010) + Phase 1 first + second + third + fourth + fifth + sixth + seventh slices (TASK-011 catalog, TASK-012 order read, TASK-013 order CAS, TASK-014 cancel, TASK-015 MQ producer, TASK-016 MQ consumer, TASK-017 outbox publisher) complete.
-`/health` + `/metrics` + `/ticket/*` (10 endpoints) + 3 `/order/{userId}/*` reads + 4 order CAS routes (`POST /order/cas`, `GET /order/{ticketId}/{quantity}/order|cas|queued`) + `PUT /order/{userId}/{orderNumber}/cancel` (TASK-014) + `POST /order/mq` + `GET /order/mq/status/{token}` (TASK-015) + Kafka consumer loop on `order-place-topic` (TASK-016) + outbox publisher draining `outbox_event` → `order-place-topic` (TASK-017) are live. The remaining tasks (TASK-018..020) bring Payment, Employee, Booking controllers online. Stubs remain wired for tasks not yet started.
+Phase 0 (TASK-001..010) + Phase 1 (TASK-011..020) + Phase 2 (TASK-021..022) + Phase 3 (TASK-023..024) are complete. All modules are live: catalog (TASK-011), order read (TASK-012), order CAS (TASK-013), order cancel (TASK-014), order MQ producer (TASK-015), order MQ consumer (TASK-016), outbox publisher (TASK-017), payment VNPay (TASK-018), employee timesheet (TASK-019), booking demo + Hi + SecureApi (TASK-020), parity tests infrastructure (TASK-021), nginx cutover runbook + k6 load tests (TASK-022), front-end scaffold (TASK-023), front-end smoke e2e (TASK-024). **All 24 tasks done.**
 
-Next step: TASK-018 — Payment VNPay gateway (create transaction + HMAC-signed return URL + callback handler).
+Next step: Ready for cutover. See `docs/CUTOVER.md` for shadow → 10% → 50% → 100% traffic migration runbook.
 
 ## 10. API Endpoints
 
@@ -182,8 +181,8 @@ Behaviour parity is verified in TASK-021 via golden-JSON comparison.
 | POST | `/api/bookings` | `BookingController` | TASK-020 | ✅ done | Java `BookingController.java:18` — `ResultMessage<BookingDto>` HTTP 200, validation 400 on `ArgumentException`, no auth, idempotent on `BookingCode` only (no controller-level idempotency; Java doesn't ship a DDL for `booking` so we appended it ourselves — KNOWN_DIFFERENCES §26). |
 | GET | `/hello/hi`, `/hello/hi/v1`, `/hello/circuit/breaker` | `HiController` | TASK-020 | ✅ done | Java `HiController.java:15-52` — `/hello/hi` → `[EnableRateLimiting("backendA")]` (2 req / 10 s), `/hello/hi/v1` → `[EnableRateLimiting("backendB")]` (5 req / 10 s), `/hello/circuit/breaker` wraps `fakestoreapi.com/products/{1..20}` HTTP call in Polly v8 ResiliencePipeline `checkRandom` (FailureRatio=0.5, MinimumThroughput=5, SamplingDuration=10s, BreakDuration=5s — matches `application.yml:81-89`). Fallback body `"Service fakestoreapi Error!"` literal. |
 | POST | `/api/v1/secure/data`, `GET /api/v1/secure/info` (+ `/unauthorized`, `/forbidden`, `/slow`, `/throw`) | `SecureApiController` | TASK-020 | ✅ done | Java `SecureApiController.java:10-21` — Java has NO signature filter (only a stub `InvalidSignatureException` class). .NET keeps Java's 2 raw endpoints verbatim (raw `{status, message, receivedPayload?}` — NO `ResultMessage<T>` wrapper, dev-mode passthrough) + adds 4 extra sub-routes for circuit-breaker smoke (KNOWN_DIFFERENCES §28). |
-| POST | `/employee/sign-in`, `GET /employee/month/{yyyyMM}` | `EmployeeController` | TASK-019 | pending | Java TBD |
-| POST | `/payment/create`, `GET /payment/callback` | `PaymentController` | TASK-018 | pending | Java TBD |
+| POST | `/employee/sign-in`, `GET /employee/month/{yyyyMM}` | `EmployeeController` | TASK-019 | ✅ done | Java `EmployeeController` — Redis BitSet `user:sign:{userId}:{yyyyMM}`, bit offset = dayOfMonth-1, UTC-pinned. |
+| POST | `/payment/create`, `GET /payment/callback/return`, `POST /payment/callback/ipn` | `PaymentController` | TASK-018 | ✅ done | Java `PaymentController` — VNPay HMAC-SHA512, IPN handler with RedLock `LOCK:PAYMENT_IPN:{txnRef}`, `ticket_order.status` untouched |
 
 Health & infra:
 

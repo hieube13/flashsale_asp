@@ -57,10 +57,19 @@ Port one Java module / use-case per task. Each task ends with green unit tests +
 
 | Task | Title | Status |
 |------|-------|--------|
-| TASK-021 | parity_tests | 🟡 pending |
-| TASK-022 | cutover | 🟡 pending |
+| TASK-021 | parity_tests | ✅ done (2026-07-14) |
+| TASK-022 | cutover | ✅ done (2026-07-14) |
 
 **Gate**: 100% green-JSON parity on listed routes; nginx shadow traffic 24h clean; cutover plan signed off.
+
+### Phase 3 — Frontend port (TASK-023..024)
+
+| Task | Title | Status |
+|------|-------|--------|
+| TASK-023 | frontend_migrate | ✅ done (2026-07-14) |
+| TASK-024 | frontend_smoke_e2e | ✅ done (2026-07-14) |
+
+**Gate**: `npm run build` passes; docker compose up `frontend`; smoke test against running .NET API.
 
 ## Migration invariants per task
 

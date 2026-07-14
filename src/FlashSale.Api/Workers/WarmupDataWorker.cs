@@ -15,15 +15,15 @@ public sealed class WarmupDataWorker : BackgroundService
 {
     private static readonly TimeSpan DailyInterval = TimeSpan.FromHours(24);
 
-    private readonly IStockOrderCacheService _stockCache;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<WarmupDataWorker> _log;
     private readonly TimeSpan _startupDelay = TimeSpan.FromSeconds(5);
 
     public WarmupDataWorker(
-        IStockOrderCacheService stockCache,
+        IServiceScopeFactory scopeFactory,
         ILogger<WarmupDataWorker> log)
     {
-        _stockCache = stockCache;
+        _scopeFactory = scopeFactory;
         _log = log;
     }
 
@@ -51,9 +51,9 @@ public sealed class WarmupDataWorker : BackgroundService
         try
         {
             _log.LogInformation("WarmupDataBeforeEvent — hydrating Redis at {Ts:O}", DateTimeOffset.UtcNow);
-            // Java seeds ticket id 4 as a representative sample; the full active-set hydration
-            // is added in TASK-013 when the StockOrderAppService learns all active tickets.
-            await _stockCache.AddStockAvailableToCacheAsync(4L, ct);
+            using var scope = _scopeFactory.CreateScope();
+            var stockCache = scope.ServiceProvider.GetRequiredService<IStockOrderCacheService>();
+            await stockCache.AddStockAvailableToCacheAsync(4L, ct);
             _log.LogInformation("WarmupDataBeforeEvent — completed at {Ts:O}", DateTimeOffset.UtcNow);
         }
         catch (Exception ex)

@@ -116,20 +116,19 @@ public sealed class OrderController : ControllerBase
     /// </summary>
     [HttpPost("cas")]
     public async Task<ResultMessage<PlaceOrderResponse>> PlaceOrderCasAsync(
-        [FromQuery] long ticketId,
-        [FromQuery] int quantity,
+        [FromBody] PlaceOrderRequest request,
         CancellationToken ct)
     {
         try
         {
-            if (quantity <= 0)
+            if (request.Quantity <= 0)
                 return ResultMessage<PlaceOrderResponse>.Error(400, "quantity must be positive");
-            var resp = await _service.PlaceOrderCasAsync(ticketId, quantity, ct);
+            var resp = await _service.PlaceOrderCasAsync(request.TicketId, request.Quantity, ct);
             return ResultMessage<PlaceOrderResponse>.Data(resp, resp.Message ?? (resp.Success ? "OK" : "Failed"));
         }
         catch (Exception ex)
         {
-            _log.LogError(ex, "placeOrderCAS failed for ticketId={TicketId} qty={Qty}", ticketId, quantity);
+            _log.LogError(ex, "placeOrderCAS failed for ticketId={TicketId} qty={Qty}", request.TicketId, request.Quantity);
             return ResultMessage<PlaceOrderResponse>.Error(500, "Internal error");
         }
     }

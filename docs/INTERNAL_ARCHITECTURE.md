@@ -270,7 +270,9 @@ Each log line includes `RequestId` (auto via `UseSerilogRequestLogging`) and
 | Employee timesheet | TASK-019 | ✅ done (2026-07-14) |
 | Booking demo + hi + secure | TASK-020 | ✅ done (2026-07-14) |
 | Parity tests | TASK-021 | ✅ done (2026-07-14) |
+| Cutover (nginx shadow → 10/50/100) | TASK-022 | ✅ done (2026-07-14) |
 | Frontend port (React 19 + Vite 8) | TASK-023 | ✅ done (2026-07-14) |
+| Frontend smoke e2e | TASK-024 | ✅ done (2026-07-14) |
 
 Stubs remain in `Stubs.cs` for the slices not yet ported. Each TASK-XXX lands by
 swapping one stub for its concrete impl + adding the matching controller +

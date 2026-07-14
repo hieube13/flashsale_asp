@@ -62,7 +62,7 @@ var redisConn = builder.Configuration["Redis:ConnectionString"]
 builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(_ =>
     StackExchange.Redis.ConnectionMultiplexer.Connect(redisConn));
 builder.Services.AddSingleton<IRedisInfrasService, RedisInfrasService>();
-builder.Services.AddSingleton<IStockOrderCacheService, StockOrderCacheService>();
+builder.Services.AddScoped<IStockOrderCacheService, StockOrderCacheService>();
 
 // ---- Distributed lock ----
 // The RedLockFactory is constructed from the existing IConnectionMultiplexer

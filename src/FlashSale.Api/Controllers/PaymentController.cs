@@ -32,20 +32,17 @@ namespace FlashSale.Api.Controllers;
 public sealed class PaymentController : ControllerBase
 {
     private readonly IPaymentAppService _paymentService;
-    private readonly PaymentAppServiceImpl _concrete;
     private readonly IVnPayGatewayService _gateway;
     private readonly IPaymentRepository _payments;
     private readonly ILogger<PaymentController> _log;
 
     public PaymentController(
         IPaymentAppService paymentService,
-        PaymentAppServiceImpl concrete,
         IVnPayGatewayService gateway,
         IPaymentRepository payments,
         ILogger<PaymentController> log)
     {
         _paymentService = paymentService;
-        _concrete = concrete;
         _gateway = gateway;
         _payments = payments;
         _log = log;
@@ -80,7 +77,7 @@ public sealed class PaymentController : ControllerBase
 
             // 4. AppService handles idempotency lookup + persist (so future calls for
             //    the same (userId, orderNumber) return the EXISTING URL, not a new one).
-            var finalUrl = await _concrete.BuildAndPersistPaymentAsync(
+            var finalUrl = await _paymentService.BuildAndPersistPaymentAsync(
                 request.UserId, request.OrderNumber, request.Method ?? "VNPAY",
                 url, txnRef, amount, ct);
 
@@ -137,9 +134,7 @@ public sealed class PaymentController : ControllerBase
             return Ok(new VnPayIpnResponse("97", "Invalid Signature"));
         }
 
-        await _paymentService.HandleCallbackAsync(vnpParams, ct);
-
-        var response = _concrete.IPNResponse ?? new VnPayIpnResponse("99", "Unknown error");
+        var response = await _paymentService.HandleCallbackAsync(vnpParams, ct);
         return Ok(response);
     }
 

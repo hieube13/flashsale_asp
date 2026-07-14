@@ -94,11 +94,10 @@ public class PaymentAppServiceImplTests
         payments.Setup(p => p.UpdateStatusAsync(TxnRef, 2, "9876543210", It.IsAny<CancellationToken>()))
                 .Returns(Task.CompletedTask);
 
-        await sut.HandleCallbackAsync(VnpParams(responseCode: "00"), CancellationToken.None);
+        var result = await sut.HandleCallbackAsync(VnpParams(responseCode: "00"), CancellationToken.None);
 
-        Assert.NotNull(sut.IPNResponse);
-        Assert.Equal("00", sut.IPNResponse!.RspCode);
-        Assert.Equal("Confirm Success", sut.IPNResponse.Message);
+        Assert.Equal("00", result.RspCode);
+        Assert.Equal("Confirm Success", result.Message);
         payments.Verify(p => p.UpdateStatusAsync(TxnRef, 2, "9876543210", It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -114,12 +113,10 @@ public class PaymentAppServiceImplTests
         payments.Setup(p => p.GetByPaymentIdAsync(TxnRef, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Sample(status: 2));
 
-        await sut.HandleCallbackAsync(VnpParams(responseCode: "24"), CancellationToken.None);
+        var result = await sut.HandleCallbackAsync(VnpParams(responseCode: "24"), CancellationToken.None);
 
-        Assert.NotNull(sut.IPNResponse);
-        Assert.Equal("00", sut.IPNResponse!.RspCode);            // VNPay wants a stable ACK so it stops
-        Assert.Equal("Confirm Success", sut.IPNResponse.Message);
-        // Read happened exactly once (to inspect status); NO UpdateStatus call must follow.
+        Assert.Equal("00", result.RspCode);
+        Assert.Equal("Confirm Success", result.Message);
         payments.Verify(p => p.GetByPaymentIdAsync(TxnRef, It.IsAny<CancellationToken>()), Times.Once);
         payments.Verify(p => p.UpdateStatusAsync(It.IsAny<string>(), It.IsAny<int>(),
                                                 It.IsAny<string?>(), It.IsAny<CancellationToken>()),
@@ -136,8 +133,8 @@ public class PaymentAppServiceImplTests
         payments.Setup(p => p.GetByPaymentIdAsync(TxnRef, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Sample(status: 3));
 
-        await sut.HandleCallbackAsync(VnpParams(responseCode: "24"), CancellationToken.None);
-        Assert.Equal("00", sut.IPNResponse!.RspCode);
+        var result = await sut.HandleCallbackAsync(VnpParams(responseCode: "24"), CancellationToken.None);
+        Assert.Equal("00", result.RspCode);
         payments.Verify(p => p.UpdateStatusAsync(It.IsAny<string>(), It.IsAny<int>(),
                                                 It.IsAny<string?>(), It.IsAny<CancellationToken>()),
                         Times.Never);
@@ -152,15 +149,13 @@ public class PaymentAppServiceImplTests
         var locks = new LockHarness(true);
         var sut = BuildSut(payments, locks);
 
-        // Stored amount = 100_000m VND → expected cents = 10_000_000.
         payments.Setup(p => p.GetByPaymentIdAsync(TxnRef, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Sample(status: 1, amount: 100_000m));
 
-        // Incoming 20_000_000 cents ≠ expected 10_000_000.
-        await sut.HandleCallbackAsync(VnpParams(amountCents: "20000000"), CancellationToken.None);
+        var result = await sut.HandleCallbackAsync(VnpParams(amountCents: "20000000"), CancellationToken.None);
 
-        Assert.Equal("04", sut.IPNResponse!.RspCode);
-        Assert.Equal("Invalid amount", sut.IPNResponse.Message);
+        Assert.Equal("04", result.RspCode);
+        Assert.Equal("Invalid amount", result.Message);
         payments.Verify(p => p.UpdateStatusAsync(It.IsAny<string>(), It.IsAny<int>(),
                                                 It.IsAny<string?>(), It.IsAny<CancellationToken>()),
                         Times.Never);
@@ -176,10 +171,10 @@ public class PaymentAppServiceImplTests
         payments.Setup(p => p.GetByPaymentIdAsync(TxnRef, It.IsAny<CancellationToken>()))
                 .ReturnsAsync((PaymentTransaction?)null);
 
-        await sut.HandleCallbackAsync(VnpParams(), CancellationToken.None);
+        var result = await sut.HandleCallbackAsync(VnpParams(), CancellationToken.None);
 
-        Assert.Equal("01", sut.IPNResponse!.RspCode);
-        Assert.Equal("Order not found", sut.IPNResponse.Message);
+        Assert.Equal("01", result.RspCode);
+        Assert.Equal("Order not found", result.Message);
         payments.Verify(p => p.GetByPaymentIdAsync(TxnRef, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -195,11 +190,11 @@ public class PaymentAppServiceImplTests
             ["vnp_TmnCode"]      = "DEMOTMN",
             ["vnp_ResponseCode"] = "00",
             ["vnp_Amount"]       = "10000000",
-            // no vnp_TxnRef
         };
 
-        await sut.HandleCallbackAsync(bad, CancellationToken.None);
-        Assert.Equal("01", sut.IPNResponse!.RspCode);
+        var result = await sut.HandleCallbackAsync(bad, CancellationToken.None);
+        Assert.Equal("01", result.RspCode);
+        Assert.Equal("Order not found", result.Message);
         payments.Verify(p => p.GetByPaymentIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
                         Times.Never);
     }
@@ -210,13 +205,13 @@ public class PaymentAppServiceImplTests
     public async Task HandleCallbackAsync_lock_busy_returns_02_without_DB()
     {
         var payments = new Mock<IPaymentRepository>(MockBehavior.Strict);
-        var locks = new LockHarness(false);            // not acquired
+        var locks = new LockHarness(false);
         var sut = BuildSut(payments, locks);
 
-        await sut.HandleCallbackAsync(VnpParams(), CancellationToken.None);
+        var result = await sut.HandleCallbackAsync(VnpParams(), CancellationToken.None);
 
-        Assert.Equal("02", sut.IPNResponse!.RspCode);
-        Assert.Equal("Order already confirmed", sut.IPNResponse.Message);
+        Assert.Equal("02", result.RspCode);
+        Assert.Equal("Order already confirmed", result.Message);
         payments.Verify(p => p.GetByPaymentIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
                         Times.Never);
     }
@@ -235,9 +230,9 @@ public class PaymentAppServiceImplTests
         payments.Setup(p => p.UpdateStatusAsync(TxnRef, 3, "9876543210", It.IsAny<CancellationToken>()))
                 .Returns(Task.CompletedTask);
 
-        await sut.HandleCallbackAsync(VnpParams(responseCode: "24"), CancellationToken.None);
+        var result = await sut.HandleCallbackAsync(VnpParams(responseCode: "24"), CancellationToken.None);
 
-        Assert.Equal("00", sut.IPNResponse!.RspCode);          // we still ACK so VNPay stops retrying
+        Assert.Equal("00", result.RspCode);
         payments.Verify(p => p.UpdateStatusAsync(TxnRef, 3, "9876543210", It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -249,7 +244,7 @@ public class PaymentAppServiceImplTests
         var payments = new Mock<IPaymentRepository>(MockBehavior.Strict);
         var sut = BuildSut(payments, new LockHarness(true));
 
-        var existing = Sample(status: 1); // PENDING
+        var existing = Sample(status: 1);
         payments.Setup(p => p.FindByOrderNumberAsync(OrderNumber, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new[] { existing });
 

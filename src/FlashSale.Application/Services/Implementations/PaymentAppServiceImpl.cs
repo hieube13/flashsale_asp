@@ -1,3 +1,4 @@
+using FlashSale.Application.Services;
 using FlashSale.Domain.Entities;
 using FlashSale.Domain.Repositories;
 using Microsoft.Extensions.Logging;
@@ -116,14 +117,13 @@ public sealed class PaymentAppServiceImpl : IPaymentAppService
         return paymentUrl;
     }
 
-    public async Task HandleCallbackAsync(IDictionary<string, string> vnpParams, CancellationToken ct = default)
+    public async Task<VnPayIpnResponse> HandleCallbackAsync(IDictionary<string, string> vnpParams, CancellationToken ct = default)
     {
         // 1. Pull the txnRef. VNPay sends it as vnp_TxnRef.
         if (!vnpParams.TryGetValue("vnp_TxnRef", out var txnRef) || string.IsNullOrWhiteSpace(txnRef))
         {
             _log.LogWarning("[Payment/IPN] Missing vnp_TxnRef");
-            IPNResponse = new VnPayIpnResponse("01", "Order not found");
-            return;
+            return new VnPayIpnResponse("01", "Order not found");
         }
 
         // 2. Response code from VNPay: "00" = success. Anything else is a failure.
@@ -142,10 +142,7 @@ public sealed class PaymentAppServiceImpl : IPaymentAppService
         if (!acquired)
         {
             _log.LogWarning("[Payment/IPN] Lock busy for txnRef={TxnRef} (concurrent retry)", txnRef);
-            // Treat as "Order already confirmed" — VNPay stops retrying once it sees
-            // a stable ACK. Mirrors Java line 78-83.
-            IPNResponse = new VnPayIpnResponse("02", "Order already confirmed");
-            return;
+            return new VnPayIpnResponse("02", "Order already confirmed");
         }
 
         try
@@ -155,8 +152,7 @@ public sealed class PaymentAppServiceImpl : IPaymentAppService
             if (tx is null)
             {
                 _log.LogWarning("[Payment/IPN] Unknown txnRef={TxnRef}", txnRef);
-                IPNResponse = new VnPayIpnResponse("01", "Order not found");
-                return;
+                return new VnPayIpnResponse("01", "Order not found");
             }
 
             // 5. Already terminal? Idempotent: confirm success regardless of code.
@@ -165,8 +161,7 @@ public sealed class PaymentAppServiceImpl : IPaymentAppService
                 _log.LogInformation(
                     "[Payment/IPN] txnRef={TxnRef} already terminal status={Status} — idempotent ACK",
                     txnRef, tx.PaymentStatus);
-                IPNResponse = new VnPayIpnResponse("00", "Confirm Success");
-                return;
+                return new VnPayIpnResponse("00", "Confirm Success");
             }
 
             // 6. Validate amount matches the row.
@@ -176,8 +171,7 @@ public sealed class PaymentAppServiceImpl : IPaymentAppService
             {
                 _log.LogWarning(
                     "[Payment/IPN] Bad amount format txnRef={TxnRef} raw={Raw}", txnRef, vnpAmount);
-                IPNResponse = new VnPayIpnResponse("04", "Invalid amount");
-                return;
+                return new VnPayIpnResponse("04", "Invalid amount");
             }
 
             // Stored amount is in VND; gateway amount is VND * 100.
@@ -187,8 +181,7 @@ public sealed class PaymentAppServiceImpl : IPaymentAppService
                 _log.LogWarning(
                     "[Payment/IPN] Amount mismatch txnRef={TxnRef} expected={Expected} got={Got}",
                     txnRef, expectedLong, incomingLong);
-                IPNResponse = new VnPayIpnResponse("04", "Invalid amount");
-                return;
+                return new VnPayIpnResponse("04", "Invalid amount");
             }
 
             // 7. Flip status based on responseCode.
@@ -199,26 +192,11 @@ public sealed class PaymentAppServiceImpl : IPaymentAppService
                 "[Payment/IPN] txnRef={TxnRef} status {From}->{To} amount={Amount}",
                 txnRef, tx.PaymentStatus, newStatus, tx.Amount);
 
-            IPNResponse = new VnPayIpnResponse("00", "Confirm Success");
+            return new VnPayIpnResponse("00", "Confirm Success");
         }
         finally
         {
             await handle.ReleaseAsync(ct);
         }
     }
-
-    /// <summary>
-    /// Holds the JSON RspCode/Message that the IPN controller will serialize to VNPay.
-    /// Populated by <see cref="HandleCallbackAsync"/>. Per-request because the
-    /// IPaymentAppService callback returns <see cref="Task"/> — callers must read
-    /// this BEFORE awaiting any subsequent request, which is guaranteed because the
-    /// controller chain is fully synchronous between Map and WriteAsJsonAsync.
-    /// </summary>
-    public VnPayIpnResponse? IPNResponse { get; private set; }
 }
-
-/// <summary>
-/// JSON shape VNPay's IPN consumer expects. Field names match the spec exactly:
-/// <c>RspCode</c> + <c>Message</c>. Spec: VNPay reads raw text and parses JSON.
-/// </summary>
-public sealed record VnPayIpnResponse(string RspCode, string Message);
