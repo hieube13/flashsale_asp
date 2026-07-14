@@ -125,3 +125,22 @@ CREATE TABLE IF NOT EXISTS payment_transaction (
   KEY idx_payment_order_status (OrderNumber, PaymentStatus),
   KEY idx_payment_user (UserId)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 11. booking — booking records (TASK-020).
+-- Mirrors Java Booking entity (xxxx-domain/.../entity/Booking.java) with PascalCase
+-- columns to match EF Core / Pomelo MySQL convention. Status values:
+--   0=PENDING, 1=CONFIRMED, 2=CANCELLED (matches Booking entity XML doc).
+-- Java code did NOT ship a DDL for this table (bug we are intentionally fixing in .NET,
+-- otherwise POST /api/bookings would throw on missing table — see KNOWN_DIFFERENCES.md §26).
+CREATE TABLE IF NOT EXISTS booking (
+  Id            BIGINT NOT NULL AUTO_INCREMENT,
+  TicketId      BIGINT NOT NULL,
+  Quantity      INT NOT NULL,
+  BookingCode   VARCHAR(64) NOT NULL,
+  Status        TINYINT NOT NULL DEFAULT 0 COMMENT '0=PENDING, 1=CONFIRMED, 2=CANCELLED',
+  CreatedAt     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (Id),
+  UNIQUE KEY uk_booking_code (BookingCode),
+  KEY idx_booking_ticket (TicketId),
+  KEY idx_booking_status (Status, CreatedAt)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

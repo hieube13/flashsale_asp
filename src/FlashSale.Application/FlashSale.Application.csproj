@@ -15,4 +15,8 @@
     <ProjectReference Include="..\FlashSale.Contracts\FlashSale.Contracts.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="FlashSale.UnitTests" />
+  </ItemGroup>
+
 </Project>

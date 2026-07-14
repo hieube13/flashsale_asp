@@ -7,16 +7,15 @@ namespace FlashSale.Api.Stubs;
 /// <summary>
 /// Stub services — placeholder only.
 /// Real implementations are added in subsequent tasks:
-///   TASK-011: Catalog (ITicketAppService, ITicketDetailAppService)
-///   TASK-013: Order CAS slice (ITicketOrderAppService.PlaceOrderCasAsync, DecreaseStock*)
-///   TASK-014: Order cancel slice (ITicketOrderAppService.CancelOrderAsync)
-///   TASK-015: OrderMQ producer (IOrderMqAppService)
-///   TASK-016: OrderMQ consumer (IOrderMqConsumerHandler)
-///   TASK-018: PAYMENT (IPaymentAppService) — DONE: real impl in
-///     FlashSale.Application.Services.Implementations.PaymentAppServiceImpl
-///   TASK-019: EMPLOYEE TIMSHEET (IEmployeeCacheService) — DONE: real impl in
-///     FlashSale.Application.Services.Implementations.EmployeeCacheServiceImpl
-///   TASK-020: Booking (IBookingAppService)
+///   TASK-011: Catalog (ITicketAppService, ITicketDetailAppService) — DONE
+///   TASK-013: Order CAS slice (ITicketOrderAppService.PlaceOrderCasAsync, DecreaseStock*) — DONE
+///   TASK-014: Order cancel slice (ITicketOrderAppService.CancelOrderAsync) — DONE
+///   TASK-015: OrderMQ producer (IOrderMqAppService) — DONE
+///   TASK-016: OrderMQ consumer (IOrderMqConsumerHandler) — DONE
+///   TASK-017: Outbox publisher — DONE
+///   TASK-018: PAYMENT (IPaymentAppService) — DONE
+///   TASK-019: EMPLOYEE TIMESHEET (IEmployeeCacheService) — DONE
+///   TASK-020: Booking (IBookingAppService) — DONE
 /// </summary>
 
 public sealed class TicketAppServiceStub : ITicketAppService
@@ -34,14 +33,4 @@ public sealed class TicketDetailAppServiceStub : ITicketDetailAppService
 {
     public Task<TicketDetailDto> GetByIdAsync(long detailId, long? version, CancellationToken ct = default) => throw new NotImplementedException();
     public Task<bool> OrderByUserAsync(long detailId, CancellationToken ct = default) => throw new NotImplementedException();
-}
-
-public sealed class BookingAppServiceStub : IBookingAppService
-{
-    public Task<BookingDto> CreateAsync(CreateBookingRequest request, CancellationToken ct = default) => throw new NotImplementedException();
-}
-
-public sealed class EventAppServiceStub : IEventAppService
-{
-    public string SayHi(string name) => $"Hi {name}";
 }

@@ -266,9 +266,9 @@ Each log line includes `RequestId` (auto via `UseSerilogRequestLogging`) and
 | OrderMQ producer | TASK-015 | ✅ done (2026-07-14) |
 | OrderMQ consumer | TASK-016 | ✅ done (2026-07-14) |
 | OrderMQ publisher (outbox drain) | TASK-017 | ✅ done (2026-07-14) |
-| Payment VNPay | TASK-018 | pending |
-| Employee timesheet | TASK-019 | pending |
-| Booking demo + hi + secure | TASK-020 | pending |
+| Payment VNPay | TASK-018 | done |
+| Employee timesheet | TASK-019 | done |
+| Booking demo + hi + secure | TASK-020 | done |
 
 Stubs remain in `Stubs.cs` for the slices not yet ported. Each TASK-XXX lands by
 swapping one stub for its concrete impl + adding the matching controller +

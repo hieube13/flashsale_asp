@@ -2,12 +2,12 @@
 
 | Field | Value |
 |-------|-------|
-| Status | 🟡 pending |
+| Status | ✅ done |
 | Branch | `f_task_020_booking_demo` |
 | Module | booking |
 | Phase | 1 — Feature port |
 | Commit | — |
-| Completed | — |
+| Completed | 2026-07-14 |
 
 ## Mục tiêu
 

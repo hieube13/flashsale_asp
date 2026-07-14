@@ -71,10 +71,21 @@ String vnp_SecureHash = hmacSHA512("SECRET", hashDataStr);
 
 **Java** returns `ResultUtil.data(PlaceOrderResponse.failed(...))` for errors — the HTTP status is always 200 OK with `success: false` in the body.
 
-**TASK-013/015 .NET plan**:
-- Keep HTTP 200 + `success: false` body for parity.
+**TASK-013/015/020 .NET plan**:
+- Keep HTTP 200 + `success: false` body for parity. Booking `POST /api/bookings` returns `ResultMessage<BookingDto>.Error(400/500, msg)` with HTTP 200.
 - Document in INTERNAL_ARCHITECTURE §API parity.
 - `Verdict`: **preserve** (frontend depends on it).
+
+### 4b. Booking `BookingDto` field shape (TASK-020)
+
+**Java** `BookingDTO` (`xxxx-application/.../model/BookingDTO.java`) exposes **5 fields only**:
+`{ id, ticketId, quantity, bookingCode, status }` — **no `createdAt`**.
+
+**.NET** `BookingDto` (`FlashSale.Contracts.Dto.BookingDto`) mirrors Java exactly: 5 fields.
+
+**`.NET` vs Java parity** — match. Removed `CreatedAt` from the .NET record (it was present in the early scaffold but Java does not carry it).
+
+**`Verdict`**: **preserve** (frontend parity).
 
 ### 5. Tomcat accept-count / max-connections tuning (TASK-009)
 
@@ -101,6 +112,38 @@ String vnp_SecureHash = hmacSHA512("SECRET", hashDataStr);
 **`Verdict`**: **preserve**.
 
 ### 8. ~~Java userId pattern in orderQueue (TASK-015)~~ → already covered by main table row #7 (TASK-013)
+
+### 26. Java shipping without `booking` DDL (TASK-020)
+
+**Java**: The `Booking` entity is mapped via Spring Data JPA but `application.properties` sets `spring.jpa.hibernate.ddl-auto: none` and **the `environment/mysql/init/*.sql` set does not contain a `CREATE TABLE booking` statement**. As-shipped, `POST /api/bookings` would throw at runtime ("table doesn't exist") — Java has this latent bug.
+
+**.NET** (TASK-020): We added `CREATE TABLE IF NOT EXISTS booking (…)` to `environment/mysql/init/01-schema.sql` so the table exists at startup. This is a **deliberate .NET improvement** over the Java DDL gap.
+
+**`Verdict`**: **.NET diverges** — fixing the missing DDL on the .NET side. Document as known Java latent bug.
+
+### 27. `EventAppServiceImpl.SayHi(name)` ignores input (TASK-020)
+
+**Java** `HiInfrasRepositoryImpl.sayHi(who)` returns the **hardcoded literal `"Hi Infrastructure"` regardless of the `who` argument** (`xxxx-infrastructure/.../HiInfrasRepositoryImpl.java:10`). The arg is silently dropped.
+
+**.NET** `EventAppServiceImpl.SayHi(name)` (`FlashSale.Application.Services.Implementations.EventAppServiceImpl.cs`) preserves this quirk — accepts the input but returns the literal constant.
+
+**`Verdict`**: **preserve** — observable parity. If this is ever needed to behave normally, both Java and .NET must be changed together.
+
+### 28. `SecureApiController` has 4 extra demo routes (TASK-020)
+
+**Java** `SecureApiController.java` exposes **exactly 2 routes** under `/api/v1/secure/*` (`GET /info` + `POST /data`). No mode-switching, no `mode=…` query param, no exception simulator. Java has a class `InvalidSignatureException` but no interceptor that actually enforces signatures — the endpoint is unprotected.
+
+**.NET** TASK-020 keeps both Java endpoints verbatim (raw `{status, message, receivedPayload?}` shape — **NO** `ResultMessage<T>` wrapper) and **adds 4 extra sub-routes** for circuit-breaker smoke testing: `/unauthorized` (HTTP 401), `/forbidden` (HTTP 403), `/slow` (2 s `Task.Delay` then 200), `/throw` (raises `InvalidOperationException`). The extra routes are dev-mode only and would be gated behind an environment flag in production.
+
+**`Verdict`**: **.NET diverges** — extra routes do not exist in Java. They are clearly prefixed by behaviour (`/unauthorized`, `/forbidden`, …) so a parity scanner can ignore them. No impact on the parity baseline because Java endpoints stay byte-for-byte identical.
+
+### 29. `IBookingRepository.findByBookingCode` not ported (TASK-020)
+
+**Java** `BookingRepository` interface declares `findByBookingCode(String)` but **no controller or service uses it** — the method is dead code.
+
+**.NET** `IBookingRepository` (`FlashSale.Domain.Repositories.IBookingRepository`) carries only `AddAsync` + `GetByIdAsync` (the `GetByIdAsync` is also unused by any controller — kept for parity with the existing scaffold + future endpoints).
+
+**`Verdict`**: **preserve** — no consumer means parity is automatically maintained.
 
 ---
 

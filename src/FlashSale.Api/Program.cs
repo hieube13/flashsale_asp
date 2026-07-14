@@ -1,4 +1,4 @@
-using FlashSale.Api.Stubs;
+using FlashSale.Api.Controllers;
 using FlashSale.Api.Workers;
 using FlashSale.Application.Services;
 using FlashSale.Application.Services.Implementations;
@@ -15,11 +15,15 @@ using FlashSale.Infrastructure.Messaging;
 using FlashSale.Infrastructure.Persistence;
 using FlashSale.Infrastructure.Persistence.Repositories;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Polly;
+using Polly.CircuitBreaker;
 using Prometheus;
 using Serilog;
 using StackExchange.Redis;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -93,6 +97,7 @@ builder.Services.AddScoped<IOutboxEventRepository, OutboxEventRepositoryImpl>();
 builder.Services.AddScoped<IIdempotencyKeyRepository, IdempotencyKeyRepositoryImpl>();
 builder.Services.AddScoped<IPaymentRepository, PaymentRepositoryImpl>();
 builder.Services.AddScoped<IEmployeeBitSetService, EmployeeBitSetService>();
+builder.Services.AddScoped<IBookingRepository, BookingRepositoryImpl>();
 
 // ---- Domain services (Domain) ----
 builder.Services.AddScoped<ITicketDomainService, TicketDomainService>();
@@ -110,14 +115,64 @@ builder.Services.AddScoped<IOrderMqAppService, OrderMqAppServiceImpl>();
 builder.Services.AddScoped<IOrderMqConsumerHandler, OrderMqConsumerHandlerImpl>();
 builder.Services.AddScoped<IPaymentAppService, PaymentAppServiceImpl>();
 builder.Services.AddScoped<IEmployeeCacheService, EmployeeCacheServiceImpl>();
+builder.Services.AddScoped<IBookingAppService, BookingAppServiceImpl>();
+builder.Services.AddScoped<IEventAppService, EventAppServiceImpl>();
 
 // ---- Catalog cache (Infrastructure cache + Application abstraction) ----
 builder.Services.AddScoped<ITicketCacheService, FlashSale.Infrastructure.Cache.TicketCacheService>();
 builder.Services.AddScoped<FlashSale.Application.Services.ITicketDetailCacheService, FlashSale.Infrastructure.Cache.TicketDetailCacheService>();
 
-// ---- Other application services — stubs until later tasks land their real impls ----
-builder.Services.AddScoped<IBookingAppService, BookingAppServiceStub>();
-builder.Services.AddScoped<IEventAppService, EventAppServiceStub>();
+// ---- HttpClient for circuit-breaker demo (HiController) ----
+builder.Services.AddHttpClient();
+
+// ---- Rate limiter (TASK-020) — mirrors Java Resilience4j RateLimiter ----
+//   backendA: 2 req / 10 s  (was used by /hello/hi)
+//   backendB: 5 req / 10 s  (was used by /hello/hi/v1)
+//   queueLimit=0 in both (Java timeoutDuration=0 for backendA; 3s for backendB — we keep 0 for parity
+//   with the rejection semantics of "Too many request" fallback).
+builder.Services.AddRateLimiter(o =>
+{
+    o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    o.AddPolicy("backendA", ctx =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: ctx.User.Identity?.Name ?? "anonymous",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit         = 2,
+                Window              = TimeSpan.FromSeconds(10),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit          = 0,
+                AutoReplenishment  = true,
+            }));
+    o.AddPolicy("backendB", ctx =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: ctx.User.Identity?.Name ?? "anonymous",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit         = 5,
+                Window              = TimeSpan.FromSeconds(10),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit          = 0,
+                AutoReplenishment  = true,
+            }));
+});
+
+// ---- Polly v8 Resilience Pipeline (TASK-020) — mirrors Resilience4j @CircuitBreaker("checkRandom") ----
+//   FailureRatio=0.5, MinimumThroughput=5, SamplingDuration=10s, BreakDuration=5s.
+//   Matches application.yml lines 81-89 of the Java source.
+builder.Services.AddResiliencePipeline(HiController.CHECK_RANDOM_PIPELINE, b =>
+{
+    b.AddCircuitBreaker(new CircuitBreakerStrategyOptions
+    {
+        FailureRatio       = 0.5,
+        MinimumThroughput  = 5,
+        SamplingDuration   = TimeSpan.FromSeconds(10),
+        BreakDuration      = TimeSpan.FromSeconds(5),
+        ShouldHandle       = new PredicateBuilder().Handle<HttpRequestException>()
+                                                   .Handle<TaskCanceledException>()
+                                                   .Handle<TimeoutException>(),
+    });
+});
 
 // ---- Outbox publisher ----
 builder.Services.AddHostedService<OutboxPublisherWorker>();
@@ -144,6 +199,7 @@ if (app.Environment.IsDevelopment())
 app.UseSerilogRequestLogging();
 app.UseRouting();
 app.UseForwardedHeaders();
+app.UseRateLimiter();   // TASK-020 — wire [EnableRateLimiting] for /hello/hi and /hello/hi/v1
 
 // Prometheus /metrics
 app.UseHttpMetrics();

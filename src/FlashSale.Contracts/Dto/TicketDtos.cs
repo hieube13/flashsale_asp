@@ -55,5 +55,4 @@ public sealed record BookingDto(
     long TicketId,
     int Quantity,
     string BookingCode,
-    int Status,
-    DateTime CreatedAt);
+    int Status);
