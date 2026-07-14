@@ -29,7 +29,8 @@ public sealed record TicketDetailDto(
     DateTime SaleStartTime,
     DateTime SaleEndTime,
     int Status,
-    long ActivityId);
+    long ActivityId,
+    long? Version);
 
 public sealed record TicketOrderDto(
     int Id,

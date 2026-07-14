@@ -29,7 +29,8 @@ public static class TicketMapper
 
     public static TicketDetailDto ToDto(TicketDetail d) =>
         new(d.Id, d.Name, d.Description, d.StockInitial, d.StockAvailable, d.IsStockPrepared,
-            d.PriceOriginal, d.PriceFlash, d.SaleStartTime, d.SaleEndTime, d.Status, d.ActivityId);
+            d.PriceOriginal, d.PriceFlash, d.SaleStartTime, d.SaleEndTime, d.Status, d.ActivityId,
+            Version: null); // Version only available from TicketDetailCacheEntry, not from bare entity
 
     /// <summary>
     /// Build a Ticket entity from the create request payload.

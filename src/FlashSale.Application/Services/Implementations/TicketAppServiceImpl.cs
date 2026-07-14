@@ -149,7 +149,8 @@ public sealed class TicketDetailAppServiceImpl : ITicketDetailAppService
             entry.SaleStartTime,
             entry.SaleEndTime,
             entry.Status,
-            entry.ActivityId);
+            entry.ActivityId,
+            entry.Version);
     }
 
     public async Task<bool> OrderByUserAsync(long detailId, CancellationToken ct = default)

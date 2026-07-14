@@ -269,6 +269,7 @@ Each log line includes `RequestId` (auto via `UseSerilogRequestLogging`) and
 | Payment VNPay | TASK-018 | done |
 | Employee timesheet | TASK-019 | done |
 | Booking demo + hi + secure | TASK-020 | done |
+| Parity tests | TASK-021 | done |
 
 Stubs remain in `Stubs.cs` for the slices not yet ported. Each TASK-XXX lands by
 swapping one stub for its concrete impl + adding the matching controller +

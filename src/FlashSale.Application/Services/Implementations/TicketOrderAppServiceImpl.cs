@@ -324,8 +324,43 @@ public sealed class TicketOrderAppServiceImpl : ITicketOrderAppService
 
     // ============== Stubs until later tasks port them ==============
 
-    public Task<bool> DecreaseStockQueueAsync(long userId, long ticketId, int quantity, CancellationToken ct = default)
-        => throw new NotImplementedException("TASK-015: order MQ producer");
+    public async Task<bool> DecreaseStockQueueAsync(long userId, long ticketId, int quantity, CancellationToken ct = default)
+    {
+        _log.LogInformation("DecreaseStockQueue | userId={UserId} | ticketId={TicketId} | quantity={Quantity}",
+            userId, ticketId, quantity);
+
+        if (userId <= 0 || ticketId <= 0 || quantity <= 0)
+            return false;
+
+        // Mirrors Java TicketOrderAppServiceImpl.decreaseStockQueue lines 230-251:
+        // Distributed lock on "TOKEN_LOCK_KEY:{ticketId}" (wait 1 s, expiry 5 s).
+        // On success: call IOrderMqAppService.StartOrderByUserAsync(userId, ticketId, quantity).
+        // Note: Java's mqPlaceOrderService.startOrderByUser always returns false (stub),
+        // so the return value always matches.
+        var lck = _lockProvider.GetLock($"TOKEN_LOCK_KEY:{ticketId}");
+        var acquired = await lck.TryAcquireAsync(
+            expiry: TimeSpan.FromSeconds(5),
+            wait: TimeSpan.FromSeconds(1),
+            ct);
+
+        if (!acquired)
+        {
+            _log.LogWarning("DecreaseStockQueue lock not acquired for ticketId={TicketId}", ticketId);
+            return false;
+        }
+
+        _log.LogInformation("DecreaseStockQueue lock acquired for ticketId={TicketId}, calling orderMQ", ticketId);
+        try
+        {
+            // Java: return mqPlaceOrderService.startOrderByUser(userId, tickerId, quantity);
+            // That method is a stub that always returns false — mirror exactly.
+            return await _domain.StartOrderByUserAsync(userId, ticketId, quantity, ct);
+        }
+        finally
+        {
+            await lck.ReleaseAsync(ct);
+        }
+    }
 
     // ============== Helpers ==============
 

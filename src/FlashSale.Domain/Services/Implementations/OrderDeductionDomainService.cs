@@ -55,4 +55,14 @@ public sealed class OrderDeductionDomainService : IOrderDeductionDomainService
         // domain-layer seam so the handler signature stays async-friendly.
         _orders.InsertAsync(yearMonth, order, CancellationToken.None).GetAwaiter().GetResult();
     }
+
+    /// <summary>
+    /// Stub entry point for the queued order path.
+    /// Mirrors Java <c>mqPlaceOrderService.startOrderByUser</c> which always
+    /// returns <c>false</c> (<c>MQPlaceOrderTokenServiceImpl.submitOrderToQueued</c> line 26).
+    /// This exists as a seam so the application layer does not reach into Kafka/Redis
+    /// directly when implementing <c>DecreaseStockQueueAsync</c>.
+    /// </summary>
+    public Task<bool> StartOrderByUserAsync(long userId, long ticketId, int quantity, CancellationToken ct = default)
+        => Task.FromResult(false);
 }

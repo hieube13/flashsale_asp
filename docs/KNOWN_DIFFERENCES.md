@@ -37,6 +37,9 @@ Each row is one observed difference:
 | 23 | Employee `consecutive-days` across month boundary | Java: walks backward from the requested day's bit-0 in the same bitmap. Returns once it hits a clear bit or bit 0 — even when the user actually signed in every day up to the last day of the previous month. | .NET: identical — single-month walk, no follow-up into `user:sign:{userId}:{prev_yyyyMM}`. | preserve | A future TASK can add a cross-month follow-up by reading the previous month's bit at offset `lengthOfPreviousMonth - 1`. Out of scope for the parity-first port — Java behaviour is what the original product team shipped. | TASK-019 |
 | 24 | Employee `monthly-sign-details` + `summary` DTO shape | Java: returns `Map<String, Object>` with keys `totalSignCount` (int) and `signDays` (List<Integer>) for `monthly-sign-details`; `summary` returns a Map keyed by `date`/`hasSignedIn`/`monthlyCount`/`firstSignDay`/`consecutiveDays`. | .NET: returns typed DTOs `MonthlySignDetailsDto { TotalSignCount:int, SignDays:IReadOnlyList<int> }` and `EmployeeSummaryDto { date, hasSignedIn, monthlyCount, firstSignDay, consecutiveDays }`. JSON serialization uses .NET's camelCase convention. | preserve (different shape, same data) | Wire JSON keys are identical between Java's `Map` and the .NET DTO (`totalSignCount`, `signDays`, `hasSignedIn`, `monthlyCount`, `firstSignDay`, `consecutiveDays`). The contract test (TASK-021) compares these field-by-field. | TASK-019 |
 | 25 | Employee controller auth | Java: `EmployeeController` has no auth filter — anyone can `POST /api/sign-in/{userId}` for any user. | .NET: `EmployeeController` matches Java's open route shape (no `[Authorize]` attribute). | preserve (with caveat) | Java's open policy is undocumented but observable in `xxxx.com`'s production. The .NET port follows suit so cutover parity holds. This is a documented gap for the operator to close down (e.g. add JWT or rate-limit middleware) in a follow-up TASK — see INTERNAL_ARCHITECTURE.md §Auth boundaries. | TASK-019 |
+| 30 | `PlaceOrderResponse` field names | Java: `placeOrderTaskId` / `orderId` | .NET: `orderNumber` | preserve | `orderNumber` is semantically clearer. Parity tests in `OrderParityTests` verify the .NET shape. | TASK-021 |
+| 31 | `POST /payment/create` request shape | Java: query params (`userId`, `orderNumber`, `method`) | .NET: JSON body (`CreatePaymentRequest`) | preserve | .NET JSON body is ASP.NET best practice (typed model binding, validation, OpenAPI). | TASK-021 |
+| 32 | Employee + Order raw responses | Java: raw types (string / bool / long / int) | .NET: `ResultMessage<T>` wrapper | preserve | .NET API convention. These endpoints are internal/admin-facing (not called by `xxxx.fe.com`). Documented for reviewers. | TASK-021 |
 
 ---
 
@@ -144,6 +147,52 @@ String vnp_SecureHash = hmacSHA512("SECRET", hashDataStr);
 **.NET** `IBookingRepository` (`FlashSale.Domain.Repositories.IBookingRepository`) carries only `AddAsync` + `GetByIdAsync` (the `GetByIdAsync` is also unused by any controller — kept for parity with the existing scaffold + future endpoints).
 
 **`Verdict`**: **preserve** — no consumer means parity is automatically maintained.
+
+### 30. `PlaceOrderResponse` field names differ: `orderNumber` vs `placeOrderTaskId`/`orderId` (TASK-021)
+
+**Java** `PlaceOrderResponse.java` uses field names:
+```json
+{ "success": true, "placeOrderTaskId": "TOKEN_TICKET_USER_1_5", "orderId": null, "code": null, "message": null }
+```
+
+**.NET** `PlaceOrderResponse.cs` uses field names:
+```json
+{ "success": true, "orderNumber": "OKX-SGN-7-42-1718246100123", "code": null, "message": null }
+```
+
+Affected endpoints: `POST /order/cas`, `POST /order/mq`, `GET /order/mq/status/{token}`.
+
+**`Verdict`**: **preserve .NET naming** — `orderNumber` is semantically clearer. Documenting as known difference. Parity tests in `OrderParityTests` verify the .NET shape.
+
+### 31. `POST /payment/create` request format: JSON body vs query params (TASK-021)
+
+**Java** `PaymentController.java:21`:
+```java
+public ResultMessage<String> createPayment(
+    @RequestParam("userId") Long userId,
+    @RequestParam("orderNumber") String orderNumber,
+    @RequestParam("method") String method)
+```
+
+**.NET** `PaymentController.cs` accepts a JSON body (`CreatePaymentRequest` with `userId`, `orderNumber`, `method`).
+
+**`Verdict`**: **preserve .NET JSON body** — ASP.NET best practice (typed model binding, validation, OpenAPI docs). Documenting as known difference.
+
+### 32. Employee + Order endpoints: `.NET` wraps in `ResultMessage<T>`, Java returns raw types (TASK-021)
+
+**Java** `/api/sign-in/{userId}/*` endpoints return raw types:
+- `POST /api/sign-in/{userId}` → raw string `"Sign-in successful for {userId} at {date}"`
+- `GET /api/sign-in/{userId}/check?date=` → raw boolean
+- `GET /api/sign-in/{userId}/monthly-count?month=` → raw long
+- `GET /api/sign-in/{userId}/monthly-sign-details?month=` → raw `Map<String,Object>`
+- `GET /api/sign-in/{userId}/consecutive-days?date=` → raw int
+- `GET /api/sign-in/{userId}/summary?date=` → raw `Map<String,Object>`
+
+**Java** `/order/{ticketId}/{quantity}/order` and `/order/{ticketId}/{quantity}/cas` return raw boolean.
+
+**.NET** `EmployeeController` and `OrderController` wrap all responses in `ResultMessage<T>` (standard envelope: `success`, `message`, `code`, `timestamp`, `result`).
+
+**`Verdict`**: **preserve .NET `ResultMessage<T>` wrapper** — this is the .NET API convention. Employee and Order endpoints are internal/admin-facing and not called by the `xxxx.fe.com` frontend. Documenting as known difference. Contract tests verify the .NET envelope shape.
 
 ---
 
