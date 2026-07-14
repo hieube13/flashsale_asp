@@ -48,13 +48,13 @@ builder.WebHost.ConfigureKestrel(opts =>
     opts.ListenAnyIP(5080);
 });
 
-// ---- DB ----
-var mysqlConn = builder.Configuration.GetConnectionString("MySql")
-    ?? throw new InvalidOperationException("ConnectionStrings:MySql missing");
+// ---- DB (SQL Server) ----
+var sqlConn = builder.Configuration.GetConnectionString("SqlServer")
+    ?? throw new InvalidOperationException("ConnectionStrings:SqlServer missing");
 builder.Services.AddDbContext<FlashSaleDbContext>(opts =>
-    opts.UseMySql(mysqlConn, ServerVersion.AutoDetect(mysqlConn)));
-builder.Services.Configure<MySqlOptions>(o => o.ConnectionString = mysqlConn);
-builder.Services.AddSingleton<IDbConnectionFactory, MySqlConnectionFactory>();
+    opts.UseSqlServer(sqlConn));
+builder.Services.Configure<SqlServerOptions>(o => o.ConnectionString = sqlConn);
+builder.Services.AddSingleton<IDbConnectionFactory, SqlServerConnectionFactory>();
 
 // ---- Redis ----
 var redisConn = builder.Configuration["Redis:ConnectionString"]

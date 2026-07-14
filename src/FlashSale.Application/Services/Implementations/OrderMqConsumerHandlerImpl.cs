@@ -15,7 +15,7 @@ namespace FlashSale.Application.Services.Implementations;
 /// Pipeline (mirrors Java <c>KafkaOrderConsumer.processOrder</c> lines 38-82):
 /// </para>
 /// <list type="number">
-///   <item><b>Idempotency gate</b>: <c>INSERT IGNORE INTO idempotency_key</c>
+///   <item><b>Idempotency gate</b>: <c>IF NOT EXISTS ... INSERT INTO idempotency_key</c>
 ///         — returns true if new, false on duplicate (Kafka retry / rebalance).</item>
 ///   <item><b>DB stock decrement</b>: <c>ITicketDetailRepository.TryDecreaseStockAsync</c>
 ///         — atomic <c>UPDATE … WHERE stock_available &gt;= ?</c>. On 0 rows the

@@ -28,6 +28,11 @@ It documents how the project is laid out, the dependency direction, naming, and 
                   │  repository ifaces)│
                   │ (no dependencies!) │
                   └────────────────────┘
+
+  ┌──────────────────────┐
+  │  FlashSale.WebApp     │  ← React 19 + Vite 8 frontend (separate process)
+  │  (localhost:5173)     │  ← no .NET deps, talks to FlashSale.Api via HTTP
+  └───────────────────────┘
 ```
 
 Rules enforced by `tests/FlashSale.ArchitectureTests`:
@@ -92,7 +97,7 @@ src/
 │   ├── Data/
 │   │   ├── FlashSaleDbContext.cs         # EF Core — 8 entity sets
 │   │   ├── IDbConnectionFactory.cs
-│   │   └── MySqlConnectionFactory.cs
+│   │   └── SqlServerConnectionFactory.cs  # SQL Server (TASK-025)
 │   ├── Data/Dynamic/                      # Dapper-based dynamic tables (TASK-012)
 │   │   └── TickerOrderRepositoryImpl.cs   # ticket_order_{yyyyMM} reads + Dapper inserts
 │   ├── Cache/
@@ -141,6 +146,19 @@ src/
     ├── Middleware/                         # CorrelationId (TASK-010)
     ├── appsettings.json
     └── appsettings.Development.json
+│
+└── FlashSale.WebApp/                      # React 19 + Vite 8 frontend (TASK-023, moved in TASK-026)
+    ├── src/
+    │   ├── main.jsx
+    │   ├── App.jsx
+    │   ├── index.css
+    │   ├── components/
+    │   └── services/
+    ├── public/
+    ├── vite.config.js
+    ├── package.json
+    ├── Dockerfile
+    └── nginx.conf
 
 tests/
 ├── FlashSale.UnitTests/                    # xUnit
@@ -273,6 +291,8 @@ Each log line includes `RequestId` (auto via `UseSerilogRequestLogging`) and
 | Cutover (nginx shadow → 10/50/100) | TASK-022 | ✅ done (2026-07-14) |
 | Frontend port (React 19 + Vite 8) | TASK-023 | ✅ done (2026-07-14) |
 | Frontend smoke e2e | TASK-024 | ✅ done (2026-07-14) |
+| SQL Server migration | TASK-025 | ✅ done (2026-07-14) |
+| Frontend Clean Architecture | TASK-026 | ⏳ pending |
 
 Stubs remain in `Stubs.cs` for the slices not yet ported. Each TASK-XXX lands by
 swapping one stub for its concrete impl + adding the matching controller +

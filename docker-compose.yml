@@ -13,13 +13,13 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:5080
-      ConnectionStrings__MySql: "server=mysql;port=3306;database=vetautet;user=root;password=root1234;Pooling=true;MaximumPoolSize=100;MinimumPoolSize=20;"
+      ConnectionStrings__SqlServer: "Server=mssql,1433;Database=vetautet;User Id=sa;Password=Test@Pass1234;TrustServerCertificate=True;Pooling=true;Max Pool Size=100;Min Pool Size=20;"
       Redis__ConnectionString: "redis:6379,abortConnect=false"
       Kafka__BootstrapServers: "kafka:9092"
       Kafka__OrderPlaceTopic: "order-place-topic"
       Kafka__ConsumerGroupId: "order-consumer-group"
     depends_on:
-      mysql:
+      mssql:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -46,22 +46,24 @@ services:
     networks:
       - flashsale-net
 
-  mysql:
-    image: mysql:8.0
-    container_name: flashsale.mysql
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: flashsale.mssql
     environment:
-      MYSQL_ROOT_PASSWORD: root1234
-      MYSQL_DATABASE: vetautet
+      ACCEPT_EULA: Y
+      MSSQL_SA_PASSWORD: Test@Pass1234
+      MSSQL_DATABASE: vetautet
     ports:
-      - "3316:3306"
+      - "1433:1433"
     volumes:
-      - mysql-data:/var/lib/mysql
-      - ./environment/mysql/init:/docker-entrypoint-initdb.d:ro
+      - mssql-data:/var/opt/mssql
+      - ./environment/sqlserver/init:/init:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot1234"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
+      test: ["CMD-SHELL", "sqlcmd -S localhost -U sa -P Test@Pass1234 -Q 'SELECT 1'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
     networks:
       - flashsale-net
 
@@ -119,7 +121,7 @@ services:
       - flashsale-net
 
 volumes:
-  mysql-data:
+  mssql-data:
 
 networks:
   flashsale-net:

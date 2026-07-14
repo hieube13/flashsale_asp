@@ -71,6 +71,15 @@ Port one Java module / use-case per task. Each task ends with green unit tests +
 
 **Gate**: `npm run build` passes; docker compose up `frontend`; smoke test against running .NET API.
 
+### Phase 4 — SQL Server migration + Clean Architecture (TASK-025..026)
+
+| Task | Title | Status |
+|------|-------|--------|
+| TASK-025 | sqlserver_migrate | ✅ done (2026-07-14) |
+| TASK-026 | frontend_clean_arch | ⏳ pending |
+
+**Gate**: `dotnet build` green; `dotnet test` green; mssql container healthy; frontend container healthy; smoke 5 endpoints against SQL Server.
+
 ## Migration invariants per task
 
 ```
