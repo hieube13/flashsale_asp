@@ -116,7 +116,8 @@ src/
 │   │   └── RedLockFactoryBuilder.cs           # Wraps RedLockNet.SERedis.RedLockFactory.Create (TASK-014)
 │   ├── Messaging/
 │   │   ├── IKafkaOrderProducer.cs
-│   │   └── KafkaOrderProducer.cs         # Confluent.Kafka
+│   │   ├── KafkaOrderProducer.cs         # Confluent.Kafka producer (TASK-007)
+│   │   └── OutboxPublisherWorker.cs       # BackgroundService — drains outbox_event to Kafka (TASK-017, moved from Api/Workers)
 │   └── External/
 │       ├── IVnPayGatewayService.cs
 │       └── VnPayGatewayService.cs        # stub, full HMAC in TASK-018
@@ -125,9 +126,8 @@ src/
     ├── Program.cs                          # DI wiring, Kestrel :5080, Serilog, /metrics
     ├── Stubs.cs                            # NotImplementedException stubs for not-yet-ported slices
     ├── Workers/
-    │   ├── KafkaOrderConsumerWorker.cs     # BackgroundService — real Confluent.Kafka IConsumer loop (TASK-016)
-    │   ├── OutboxPublisherWorker.cs        # BackgroundService — concrete in TASK-017
-    │   └── WarmupDataWorker.cs             # BackgroundService — Redis cache warmup (TASK-011)
+    │   │   ├── KafkaOrderConsumerWorker.cs     # BackgroundService — real Confluent.Kafka IConsumer loop (TASK-016)
+│   │   └── WarmupDataWorker.cs             # BackgroundService — Redis cache warmup (TASK-011)
     ├── Controllers/                        # added per TASK-011..020
     │   ├── TicketController.cs             # 7 endpoints (TASK-011)
     │   └── TicketDetailController.cs       # 3 endpoints incl. /ticket/ping/java (TASK-011)
@@ -265,7 +265,7 @@ Each log line includes `RequestId` (auto via `UseSerilogRequestLogging`) and
 | Order cancel (distributed lock) | TASK-014 | ✅ done (2026-07-14) |
 | OrderMQ producer | TASK-015 | ✅ done (2026-07-14) |
 | OrderMQ consumer | TASK-016 | ✅ done (2026-07-14) |
-| OrderMQ publisher (outbox drain) | TASK-017 | pending |
+| OrderMQ publisher (outbox drain) | TASK-017 | ✅ done (2026-07-14) |
 | Payment VNPay | TASK-018 | pending |
 | Employee timesheet | TASK-019 | pending |
 | Booking demo + hi + secure | TASK-020 | pending |

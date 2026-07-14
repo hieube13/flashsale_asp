@@ -1,5 +1,5 @@
 using System.Reflection;
-using FlashSale.Api.Workers;
+using FlashSale.Api.Stubs;
 using FlashSale.Application.Services;
 using FlashSale.Contracts.Dto;
 using FlashSale.Infrastructure.Cache;
@@ -16,7 +16,7 @@ namespace FlashSale.ArchitectureTests;
 /// </summary>
 public class DependencyDirectionTests
 {
-    private static readonly Assembly Api = typeof(OutboxPublisherWorker).Assembly;
+    private static readonly Assembly Api = typeof(PaymentAppServiceStub).Assembly;
     private static readonly Assembly Application = typeof(ITicketAppService).Assembly;
     private static readonly Assembly Infrastructure = typeof(IRedisInfrasService).Assembly;
     private static readonly Assembly Domain = typeof(Domain.Entities.Ticket).Assembly;

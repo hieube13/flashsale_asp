@@ -65,7 +65,7 @@ Mirror of `xxxx.com-18-06-26` (Spring Boot 3.3.5 / Java 21 / DDD modular monolit
 | order | `cancelOrder` | same | ✅ TASK-014 |
 | order-mq | `OrderMQAppServiceImpl.placeOrderMQ` | `FlashSale.Application.Services.OrderMqAppServiceImpl` | ✅ TASK-015 |
 | order-mq | `KafkaOrderConsumer` | `FlashSale.Api.Workers.KafkaOrderConsumerWorker` | ✅ TASK-016 |
-| order-mq | `OutboxPublisherJob` | `FlashSale.Api.Workers.OutboxPublisherWorker` | 🟡 TASK-017 |
+| order-mq | `OutboxPublisherJob` | `FlashSale.Infrastructure.Messaging.OutboxPublisherWorker` | ✅ TASK-017 |
 | payment | `PaymentController`, `PaymentAppServiceImpl`, `VnPayGatewayServiceImpl` | `FlashSale.Api.Controllers.PaymentController`, `FlashSale.Application.Services.PaymentAppService`, `FlashSale.Infrastructure.External.VnPayGatewayService` | 🟡 TASK-018 |
 | employee | `EmployeeController`, `EmployeeCacheService` | `FlashSale.Api.Controllers.EmployeeController`, `FlashSale.Application.Services.EmployeeCacheService` | 🟡 TASK-019 |
 | booking | `BookingController`, `BookingAppService` | `FlashSale.Api.Controllers.BookingController`, `FlashSale.Application.Services.BookingAppService` | 🟡 TASK-020 |
@@ -144,10 +144,10 @@ KafkaOrderConsumerWorker:
 
 ## 9. Current state
 
-Phase 0 (TASK-001..010) + Phase 1 first + second + third + fourth + fifth + sixth slices (TASK-011 catalog, TASK-012 order read, TASK-013 order CAS, TASK-014 cancel, TASK-015 MQ producer, TASK-016 MQ consumer) complete.
-`/health` + `/metrics` + `/ticket/*` (10 endpoints) + 3 `/order/{userId}/*` reads + 4 order CAS routes (`POST /order/cas`, `GET /order/{ticketId}/{quantity}/order|cas|queued`) + `PUT /order/{userId}/{orderNumber}/cancel` (TASK-014) + `POST /order/mq` + `GET /order/mq/status/{token}` (TASK-015) + Kafka consumer loop on `order-place-topic` (TASK-016) are live. The remaining tasks (TASK-017..020) bring Outbox publisher, Payment, Employee, Booking controllers online. Stubs remain wired for tasks not yet started.
+Phase 0 (TASK-001..010) + Phase 1 first + second + third + fourth + fifth + sixth + seventh slices (TASK-011 catalog, TASK-012 order read, TASK-013 order CAS, TASK-014 cancel, TASK-015 MQ producer, TASK-016 MQ consumer, TASK-017 outbox publisher) complete.
+`/health` + `/metrics` + `/ticket/*` (10 endpoints) + 3 `/order/{userId}/*` reads + 4 order CAS routes (`POST /order/cas`, `GET /order/{ticketId}/{quantity}/order|cas|queued`) + `PUT /order/{userId}/{orderNumber}/cancel` (TASK-014) + `POST /order/mq` + `GET /order/mq/status/{token}` (TASK-015) + Kafka consumer loop on `order-place-topic` (TASK-016) + outbox publisher draining `outbox_event` → `order-place-topic` (TASK-017) are live. The remaining tasks (TASK-018..020) bring Payment, Employee, Booking controllers online. Stubs remain wired for tasks not yet started.
 
-Next step: TASK-017 — outbox publisher (read PENDING outbox_event rows → publish to Kafka → mark PUBLISHED, scheduled worker).
+Next step: TASK-018 — Payment VNPay gateway (create transaction + HMAC-signed return URL + callback handler).
 
 ## 10. API Endpoints
 
@@ -178,6 +178,7 @@ Behaviour parity is verified in TASK-021 via golden-JSON comparison.
 | POST | `/order/mq` | `OrderMQController.PlaceOrderMqAsync` | TASK-015 | ✅ done | Java `OrderMQController.placeOrderMQ` — Redis Lua pre-deduct + cache-miss warm + retry + atomic INSERT `order_queue` + INSERT `outbox_event` in 1 EF transaction. Body `{ticketId, quantity}` → 200 with `{success:true,orderNumber:"MQ-…"}` on queued or `{success:false,code:"OUT_OF_STOCK\|PRICE_NOT_FOUND\|TICKET_NOT_FOUND\|INTERNAL_ERROR",message}`. On any DB throw → compensate Redis via `IncreaseStockCacheAsync`. |
 | GET | `/order/mq/status/{token}` | `OrderMQController.GetOrderStatusAsync` | TASK-015 | ✅ done | Java `OrderMQController.getOrderStatus` — returns the full `OrderQueue` row (status 0/1/2 + orderNumber + message) or 404 envelope when token unknown. |
 | _(background)_ | Kafka `order-place-topic` | `KafkaOrderConsumerWorker` → `OrderMqConsumerHandlerImpl.ProcessAsync` | TASK-016 | ✅ done | Java `KafkaOrderConsumer.@KafkaListener(concurrency="10")` — manual offset commit + idempotency `INSERT IGNORE` gate (24 h TTL) + atomic DB stock decrement + insert `ticket_order_{yyyyMM}` + flip `order_queue` status 1/2. 3-retry exponential backoff (200/400/800 ms) before giving up (poison-pill escape — commit offset to avoid stalling the partition). Order number format `MQ-{userId}-{tsMillis}`. |
+| _(background)_ | `outbox_event` (DB) → Kafka `order-place-topic` | `OutboxPublisherWorker.ExecuteOnceAsync` (1 s cycle) | TASK-017 | ✅ done | Java `OutboxPublisherJob.@Scheduled(fixedDelay=1000).publishRowByRow` (lines 55-80) — read PENDING batch (limit 500, ASC `created_at`) → for each row: deserialize `PlaceOrderMqMessage` from `payload` → `SendAndAwaitAckAsync` (producer `Acks=All` + `EnableIdempotence=true`, inherited from TASK-007) → `MarkPublishedAsync` (EF `ExecuteUpdateAsync` flips status=1, `published_at=UtcNow`). Per-row try/catch — Kafka failure leaves row PENDING for next cycle; malformed JSON skipped without marking (logged at error). No DLQ. |
 | POST | `/api/bookings` | `BookingController` | TASK-020 | pending | Java TBD |
 | GET | `/hello/hi`, `/hello/hi/v1`, `/hello/circuit/breaker` | `HiController` | TASK-020 | pending | Java TBD |
 | POST | `/api/v1/secure/data`, `GET /api/v1/secure/info` | `SecureApiController` | TASK-020 | pending | Java TBD |
