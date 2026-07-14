@@ -27,7 +27,8 @@ src/
 ├── FlashSale.Contracts       # DTOs (request/response), Kafka messages, shared enums
 ├── FlashSale.Application     # Service interfaces, validators (depends on Domain + Contracts)
 ├── FlashSale.Infrastructure  # EF Core, Dapper, Redis, Kafka, distributed lock (depends on Application + Domain)
-└── FlashSale.Api             # Controllers, workers, Program.cs, DI wiring, Serilog
+├── FlashSale.Api             # Controllers, workers, Program.cs, DI wiring, Serilog
+└── FlashSale.WebApp          # React 19 + Vite 8 frontend (TASK-023/026)
 tests/
 ├── FlashSale.UnitTests          # Pure logic tests (xUnit)
 ├── FlashSale.IntegrationTests   # Testcontainers MySQL/Redis/Kafka + WebApplicationFactory
@@ -70,7 +71,7 @@ All secrets live in `appsettings.json` (template) and `.env` (your override). Co
 | Setting | Default | Notes |
 |---------|---------|-------|
 | Port | 5080 | Java uses 1122 |
-| MySQL | localhost:3316, vetautet | Schema lives in `environment/mysql/init/ticket_init.sql` |
+| SQL Server | localhost:1433, vetautet | Schema lives in `environment/sqlserver/init/01-schema.sql` |
 | Redis | localhost:6319 | Cluster mode supported later |
 | Kafka | localhost:9094 | KRaft single-node (Java uses same) |
 

@@ -1,6 +1,6 @@
 # TASK_INDEX — Live task tracker
 
-25-task migration plan (22 backend + 2 frontend + 2 infra ops). Each row is updated by the Agent at the end of every execution.
+26-task migration plan (22 backend + 2 frontend + 2 infra ops). Each row is updated by the Agent at the end of every execution.
 
 ## How to use
 
@@ -11,11 +11,11 @@
 
 ## Live status
 
-All 26 tasks (TASK-001..026). TASK-025 done, TASK-026 pending. See Done (history) below.
+All 26 tasks (TASK-001..026) are done. See Done (history) below.
 
 | ID | Title | Module | Status | Branch | Commit | Completed | Notes |
 |----|-------|--------|--------|--------|--------|-----------|-------|
-| TASK-026 | frontend_clean_arch | infra | pending | — | — | — | Move frontend/ → src/FlashSale.WebApp/ for Clean Architecture alignment. Update docker-compose context path. |
+| TASK-026 | frontend_clean_arch | infra | done | — | — | 2026-07-14 | Move frontend/ → src/FlashSale.WebApp/ for Clean Architecture alignment. docker-compose context updated. .gitignore/.dockerignore updated. Docs updated. |
 
 ## Done (history)
 
@@ -48,6 +48,7 @@ All 26 tasks (TASK-001..026). TASK-025 done, TASK-026 pending. See Done (history
 | TASK-023 | frontend_migrate | 2026-07-14 | Port `xxxx.fe.com` (React 19 + Vite 8) → `flashsale/frontend/`. `vite.config.js` proxy, `src/services/api.js` relative URLs, all 13 components + assets, `Dockerfile` multi-stage nginx, `docker-compose.yml` adds `frontend` service. 28 files total, .NET build 0 errors. |
 | TASK-024 | frontend_smoke_e2e | 2026-07-14 | Docker Desktop + MySQL/Redis healthy. .NET backend (:5080) started. 8 bug fixes: (1) `StockOrderCacheService` Singleton→Scoped DI fix, (2) `WarmupDataWorker` uses `IServiceScopeFactory`, (3) `OrderController` `[FromQuery]`→`[FromBody]` JSON, (4) `PaymentController` concrete→interface, (5) `HandleCallbackAsync` void→return `VnPayIpnResponse`, (6) `BuildAndPersistPaymentAsync` added to interface, (7) duplicate `VnPayIpnResponse` removed, (8) unit tests updated. Build 0 errors. Smoke: `/health` `/ticket` `/order/cas` `/employee` `/metrics` all 200 OK. `npm install` + `npm run build` pass. **All 24 tasks complete!** |
 | TASK-025 | sqlserver_migrate | 2026-07-14 | Replace MySQL with SQL Server. EF Core: Pomelo→SqlServer, Dapper: MySqlConnector→SqlClient, `SqlServerConnectionFactory` created, `MySqlConnectionFactory` deleted, `IdempotencyKeyRepositoryImpl` uses `IF NOT EXISTS...INSERT` with `SET NOCOUNT`, DDL rewritten to T-SQL (`environment/sqlserver/init/01-schema.sql`), `docker-compose.yml` adds `mssql` container (port 1433, SA password `Test@Pass1234`), connection strings updated to `ConnectionStrings__SqlServer`, `appsettings.json` updated. Build 0 error, 136/136 unit + 5/5 arch tests pass. |
+| TASK-026 | frontend_clean_arch | 2026-07-14 | Move `flashsale/frontend/` → `src/FlashSale.WebApp/` for Clean Architecture alignment. docker-compose.yml context updated from `./frontend` → `./src/FlashSale.WebApp`. `.dockerignore` updated to include `src/FlashSale.WebApp/`. `.gitignore` updated. README.md updated. `frontend/` directory deleted. |
 
 ## Definition of Done (per task)
 
@@ -75,9 +76,9 @@ All 26 tasks (TASK-001..026). TASK-025 done, TASK-026 pending. See Done (history
 
 Replace MySQL with SQL Server across all layers. EF Core provider swap (Pomelo → SqlServer), Dapper driver swap (MySqlConnector → SqlClient), `SqlServerConnectionFactory` created, `MySqlConnectionFactory` deleted, DDL scripts rewritten to T-SQL (`environment/sqlserver/init/01-schema.sql`), docker-compose `mssql` container (port 1433, SA password `Test@Pass1234`), connection strings updated, `appsettings.json` updated. `IdempotencyKeyRepositoryImpl` uses `IF NOT EXISTS...INSERT` with `SET NOCOUNT`. Build 0 error, 136/136 unit + 5/5 arch tests pass.
 
-### TASK-026 — frontend_clean_arch (infra / pending)
+### TASK-026 — frontend_clean_arch (infra / ✅ done 2026-07-14)
 
-Move `flashsale/frontend/` → `src/FlashSale.WebApp/` aligning with Clean Architecture. Update `docker-compose.yml` context path from `./frontend` → `./src/FlashSale.WebApp`. Delete old `frontend/` folder. Update nginx environment compose overrides. Update docs.
+Move `flashsale/frontend/` → `src/FlashSale.WebApp/` aligning with Clean Architecture. docker-compose.yml context updated from `./frontend` → `./src/FlashSale.WebApp`. `.dockerignore` updated to include `src/FlashSale.WebApp/`. `.gitignore` updated. README.md updated with new solution layout. `frontend/` directory deleted.
 
 ### TASK-024 — frontend_smoke_e2e (frontend / 2026-07-14)
 

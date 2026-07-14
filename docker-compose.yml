@@ -36,7 +36,7 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: ./src/FlashSale.WebApp
       dockerfile: Dockerfile
     container_name: flashsale.fe
     ports:

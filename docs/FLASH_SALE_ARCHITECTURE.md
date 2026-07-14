@@ -144,9 +144,7 @@ KafkaOrderConsumerWorker:
 
 ## 9. Current state
 
-Phase 0 (TASK-001..010) + Phase 1 (TASK-011..020) + Phase 2 (TASK-021..022) + Phase 3 (TASK-023..024) are complete. All modules are live: catalog (TASK-011), order read (TASK-012), order CAS (TASK-013), order cancel (TASK-014), order MQ producer (TASK-015), order MQ consumer (TASK-016), outbox publisher (TASK-017), payment VNPay (TASK-018), employee timesheet (TASK-019), booking demo + Hi + SecureApi (TASK-020), parity tests infrastructure (TASK-021), nginx cutover runbook + k6 load tests (TASK-022), front-end scaffold (TASK-023), front-end smoke e2e (TASK-024). **All 24 backend + frontend tasks done.** Phase 4: TASK-025 (sqlserver_migrate) ✅ done, TASK-026 (frontend_clean_arch) ⏳ pending.
-
-Next step: TASK-026 frontend_clean_arch. See `docs/tasks/TASK-026-frontend_clean_arch.md`.
+Phase 0 (TASK-001..010) + Phase 1 (TASK-011..020) + Phase 2 (TASK-021..022) + Phase 3 (TASK-023..024) are complete. All modules are live: catalog (TASK-011), order read (TASK-012), order CAS (TASK-013), order cancel (TASK-014), order MQ producer (TASK-015), order MQ consumer (TASK-016), outbox publisher (TASK-017), payment VNPay (TASK-018), employee timesheet (TASK-019), booking demo + Hi + SecureApi (TASK-020), parity tests infrastructure (TASK-021), nginx cutover runbook + k6 load tests (TASK-022), front-end scaffold (TASK-023), front-end smoke e2e (TASK-024). **All 24 backend + frontend tasks done.** Phase 4: TASK-025 (sqlserver_migrate) ✅ done, TASK-026 (frontend_clean_arch) ✅ done. **All 26 tasks complete!**
 
 ## 10. API Endpoints
 

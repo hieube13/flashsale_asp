@@ -292,7 +292,7 @@ Each log line includes `RequestId` (auto via `UseSerilogRequestLogging`) and
 | Frontend port (React 19 + Vite 8) | TASK-023 | ✅ done (2026-07-14) |
 | Frontend smoke e2e | TASK-024 | ✅ done (2026-07-14) |
 | SQL Server migration | TASK-025 | ✅ done (2026-07-14) |
-| Frontend Clean Architecture | TASK-026 | ⏳ pending |
+| Frontend Clean Architecture | TASK-026 | ✅ done (2026-07-14) |
 
 Stubs remain in `Stubs.cs` for the slices not yet ported. Each TASK-XXX lands by
 swapping one stub for its concrete impl + adding the matching controller +

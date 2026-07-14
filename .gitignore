@@ -26,6 +26,11 @@ publish/
 # OS
 .DS_Store
 Thumbs.db
+
 # Cursor IDE
 .cursor/
 
+# Frontend
+src/FlashSale.WebApp/node_modules/
+src/FlashSale.WebApp/dist/
+src/FlashSale.WebApp/.dockerignore

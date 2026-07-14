@@ -76,7 +76,7 @@ Port one Java module / use-case per task. Each task ends with green unit tests +
 | Task | Title | Status |
 |------|-------|--------|
 | TASK-025 | sqlserver_migrate | ✅ done (2026-07-14) |
-| TASK-026 | frontend_clean_arch | ⏳ pending |
+| TASK-026 | frontend_clean_arch | ✅ done (2026-07-14) |
 
 **Gate**: `dotnet build` green; `dotnet test` green; mssql container healthy; frontend container healthy; smoke 5 endpoints against SQL Server.
 
