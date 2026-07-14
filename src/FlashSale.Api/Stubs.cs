@@ -35,11 +35,6 @@ public sealed class TicketDetailAppServiceStub : ITicketDetailAppService
     public Task<bool> OrderByUserAsync(long detailId, CancellationToken ct = default) => throw new NotImplementedException();
 }
 
-public sealed class OrderMqConsumerHandlerStub : IOrderMqConsumerHandler
-{
-    public Task ProcessAsync(PlaceOrderMqMessage message, CancellationToken ct) => throw new NotImplementedException();
-}
-
 public sealed class PaymentAppServiceStub : IPaymentAppService
 {
     public Task<string> CreatePaymentUrlAsync(long userId, string orderNumber, string method, CancellationToken ct = default) => throw new NotImplementedException();

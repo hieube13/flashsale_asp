@@ -79,6 +79,7 @@ builder.Services.AddScoped<ITicketDetailRepository, TicketDetailRepositoryImpl>(
 builder.Services.AddScoped<ITickerOrderRepository, TickerOrderRepositoryImpl>();
 builder.Services.AddScoped<IOrderQueueRepository, OrderQueueRepositoryImpl>();
 builder.Services.AddScoped<IOutboxEventRepository, OutboxEventRepositoryImpl>();
+builder.Services.AddScoped<IIdempotencyKeyRepository, IdempotencyKeyRepositoryImpl>();
 
 // ---- Domain services (Domain) ----
 builder.Services.AddScoped<ITicketDomainService, TicketDomainService>();
@@ -93,13 +94,13 @@ builder.Services.AddScoped<ITicketAppService, TicketAppServiceImpl>();
 builder.Services.AddScoped<ITicketDetailAppService, TicketDetailAppServiceImpl>();
 builder.Services.AddScoped<ITicketOrderAppService, TicketOrderAppServiceImpl>();
 builder.Services.AddScoped<IOrderMqAppService, OrderMqAppServiceImpl>();
+builder.Services.AddScoped<IOrderMqConsumerHandler, OrderMqConsumerHandlerImpl>();
 
 // ---- Catalog cache (Infrastructure cache + Application abstraction) ----
 builder.Services.AddScoped<ITicketCacheService, FlashSale.Infrastructure.Cache.TicketCacheService>();
 builder.Services.AddScoped<FlashSale.Application.Services.ITicketDetailCacheService, FlashSale.Infrastructure.Cache.TicketDetailCacheService>();
 
 // ---- Other application services — stubs until later tasks land their real impls ----
-builder.Services.AddScoped<IOrderMqConsumerHandler, OrderMqConsumerHandlerStub>();
 builder.Services.AddScoped<IPaymentAppService, PaymentAppServiceStub>();
 builder.Services.AddScoped<IBookingAppService, BookingAppServiceStub>();
 builder.Services.AddScoped<IEmployeeCacheService, EmployeeCacheServiceStub>();
