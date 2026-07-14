@@ -1,12 +1,15 @@
+using FlashSale.Domain.Repositories;
 using FlashSale.Domain.Services;
 using FlashSale.Domain.Services.Implementations;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 
 namespace FlashSale.UnitTests.Domain;
 
 public class OrderDeductionDomainServiceTests
 {
-    private readonly IOrderDeductionDomainService _sut = new OrderDeductionDomainService();
+    private readonly IOrderDeductionDomainService _sut = new OrderDeductionDomainService(
+        new Mock<ITickerOrderRepository>(MockBehavior.Loose).Object);
 
     [Theory]
     [InlineData("OKX-SGN-7-42-1718246100123", "202406")]

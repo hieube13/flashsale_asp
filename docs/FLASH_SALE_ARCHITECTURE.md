@@ -64,7 +64,7 @@ Mirror of `xxxx.com-18-06-26` (Spring Boot 3.3.5 / Java 21 / DDD modular monolit
 | order | `TicketOrderAppServiceImpl.placeOrderCAS` | same | ✅ TASK-013 |
 | order | `cancelOrder` | same | ✅ TASK-014 |
 | order-mq | `OrderMQAppServiceImpl.placeOrderMQ` | `FlashSale.Application.Services.OrderMqAppServiceImpl` | ✅ TASK-015 |
-| order-mq | `KafkaOrderConsumer` | `FlashSale.Api.Workers.KafkaOrderConsumerWorker` | 🟡 TASK-016 |
+| order-mq | `KafkaOrderConsumer` | `FlashSale.Api.Workers.KafkaOrderConsumerWorker` | ✅ TASK-016 |
 | order-mq | `OutboxPublisherJob` | `FlashSale.Api.Workers.OutboxPublisherWorker` | 🟡 TASK-017 |
 | payment | `PaymentController`, `PaymentAppServiceImpl`, `VnPayGatewayServiceImpl` | `FlashSale.Api.Controllers.PaymentController`, `FlashSale.Application.Services.PaymentAppService`, `FlashSale.Infrastructure.External.VnPayGatewayService` | 🟡 TASK-018 |
 | employee | `EmployeeController`, `EmployeeCacheService` | `FlashSale.Api.Controllers.EmployeeController`, `FlashSale.Application.Services.EmployeeCacheService` | 🟡 TASK-019 |
@@ -144,10 +144,10 @@ KafkaOrderConsumerWorker:
 
 ## 9. Current state
 
-Phase 0 (TASK-001..010) + Phase 1 first + second + third slices (TASK-011 catalog, TASK-012 order read, TASK-013 order CAS) complete.
-`/health` + `/metrics` + `/ticket/*` (10 endpoints) + 3 `/order/{userId}/*` reads + 4 order CAS routes (`POST /order/cas`, `GET /order/{ticketId}/{quantity}/order|cas|queued`) + `PUT /order/{userId}/{orderNumber}/cancel` (TASK-014) + `POST /order/mq` + `GET /order/mq/status/{token}` (TASK-015) are live. The remaining tasks (TASK-016..020) bring OrderMQ consumer/publisher, Payment, Employee, Booking controllers online. Stubs remain wired for tasks not yet started.
+Phase 0 (TASK-001..010) + Phase 1 first + second + third + fourth + fifth + sixth slices (TASK-011 catalog, TASK-012 order read, TASK-013 order CAS, TASK-014 cancel, TASK-015 MQ producer, TASK-016 MQ consumer) complete.
+`/health` + `/metrics` + `/ticket/*` (10 endpoints) + 3 `/order/{userId}/*` reads + 4 order CAS routes (`POST /order/cas`, `GET /order/{ticketId}/{quantity}/order|cas|queued`) + `PUT /order/{userId}/{orderNumber}/cancel` (TASK-014) + `POST /order/mq` + `GET /order/mq/status/{token}` (TASK-015) + Kafka consumer loop on `order-place-topic` (TASK-016) are live. The remaining tasks (TASK-017..020) bring Outbox publisher, Payment, Employee, Booking controllers online. Stubs remain wired for tasks not yet started.
 
-Next step: TASK-016 — order MQ consumer (idempotency gate + DB decrement + insert `ticket_order_{yyyyMM}` + flip `order_queue.status`).
+Next step: TASK-017 — outbox publisher (read PENDING outbox_event rows → publish to Kafka → mark PUBLISHED, scheduled worker).
 
 ## 10. API Endpoints
 
@@ -177,6 +177,7 @@ Behaviour parity is verified in TASK-021 via golden-JSON comparison.
 | PUT | `/order/{userId}/{orderNumber}/cancel` | `OrderController.CancelOrderAsync` | TASK-014 | ✅ done | Java `TicketOrderController.cancelOrder` — distributed lock `LOCK:CANCEL_ORDER:{orderNumber}` (wait 1 s, expiry 5 s) + idempotent on already-CANCELLED + DB stock restore + best-effort Redis stock restore. Always HTTP 200 with `success:true|false` (matches `KNOWN_DIFFERENCES.md` §4). |
 | POST | `/order/mq` | `OrderMQController.PlaceOrderMqAsync` | TASK-015 | ✅ done | Java `OrderMQController.placeOrderMQ` — Redis Lua pre-deduct + cache-miss warm + retry + atomic INSERT `order_queue` + INSERT `outbox_event` in 1 EF transaction. Body `{ticketId, quantity}` → 200 with `{success:true,orderNumber:"MQ-…"}` on queued or `{success:false,code:"OUT_OF_STOCK\|PRICE_NOT_FOUND\|TICKET_NOT_FOUND\|INTERNAL_ERROR",message}`. On any DB throw → compensate Redis via `IncreaseStockCacheAsync`. |
 | GET | `/order/mq/status/{token}` | `OrderMQController.GetOrderStatusAsync` | TASK-015 | ✅ done | Java `OrderMQController.getOrderStatus` — returns the full `OrderQueue` row (status 0/1/2 + orderNumber + message) or 404 envelope when token unknown. |
+| _(background)_ | Kafka `order-place-topic` | `KafkaOrderConsumerWorker` → `OrderMqConsumerHandlerImpl.ProcessAsync` | TASK-016 | ✅ done | Java `KafkaOrderConsumer.@KafkaListener(concurrency="10")` — manual offset commit + idempotency `INSERT IGNORE` gate (24 h TTL) + atomic DB stock decrement + insert `ticket_order_{yyyyMM}` + flip `order_queue` status 1/2. 3-retry exponential backoff (200/400/800 ms) before giving up (poison-pill escape — commit offset to avoid stalling the partition). Order number format `MQ-{userId}-{tsMillis}`. |
 | POST | `/api/bookings` | `BookingController` | TASK-020 | pending | Java TBD |
 | GET | `/hello/hi`, `/hello/hi/v1`, `/hello/circuit/breaker` | `HiController` | TASK-020 | pending | Java TBD |
 | POST | `/api/v1/secure/data`, `GET /api/v1/secure/info` | `SecureApiController` | TASK-020 | pending | Java TBD |

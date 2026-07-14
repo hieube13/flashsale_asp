@@ -89,3 +89,14 @@ CREATE TABLE IF NOT EXISTS outbox_event (
   PRIMARY KEY (Id),
   KEY idx_status_created (Status, CreatedAt)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 8. idempotency_key — consumer gate chống Kafka retry duplicate (TASK-016).
+-- Mirrors Java idempotency_key (lines 162-167 of ticket_init.sql) with
+-- PascalCase columns to match EF Core / Pomelo MySQL convention.
+CREATE TABLE IF NOT EXISTS idempotency_key (
+  Token      VARCHAR(64) NOT NULL COMMENT 'Unique token từ PlaceOrderMqMessage',
+  CreatedAt  DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ExpiresAt  DATETIME    NOT NULL COMMENT 'TTL — dùng cho cleanup job',
+  PRIMARY KEY (Token),
+  KEY idx_idempotency_expires (ExpiresAt)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

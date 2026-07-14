@@ -85,7 +85,8 @@ src/
 │       ├── IStockOrderCacheService.cs  # Redis Lua stock cache abstraction (TASK-013)
 │       ├── IDistributedLock.cs         # Distributed lock abstraction (TASK-014) — impl in Infrastructure
 │       ├── IOrderMqAppService.cs       # Async place-order service contract (TASK-015)
-│       └── IOrderMqTransactionService.cs  # Atomic outbox + order_queue tx wrapper (TASK-015) — impl in Infrastructure
+│       ├── IOrderMqTransactionService.cs  # Atomic outbox + order_queue tx wrapper (TASK-015) — impl in Infrastructure
+│       └── IOrderMqConsumerHandler.cs     # Consumer pipeline orchestrator (TASK-016) — impl in Application/Services/Implementations/
 │
 ├── FlashSale.Infrastructure/
 │   ├── Data/
@@ -106,6 +107,7 @@ src/
 │   │   ├── OrderQueueRepositoryImpl.cs        # EF Core order_queue CRUD (TASK-015)
 │   │   ├── OutboxEventRepositoryImpl.cs      # EF Core outbox_event CRUD (TASK-015)
 │   │   ├── OrderMqTransactionServiceImpl.cs  # EF IDbContextTransaction wrapper for atomic outbox write (TASK-015)
+│   │   ├── IdempotencyKeyRepositoryImpl.cs   # Dapper INSERT IGNORE idempotency gate (TASK-016)
 │   │   ├── Repositories/TicketRepositoryImpl.cs        # EF Core Ticket (TASK-011)
 │   │   └── Repositories/TicketDetailRepositoryImpl.cs  # EF Core TicketDetail + FOR UPDATE CAS (TASK-011)
 │   ├── DistributedLock/
@@ -123,7 +125,7 @@ src/
     ├── Program.cs                          # DI wiring, Kestrel :5080, Serilog, /metrics
     ├── Stubs.cs                            # NotImplementedException stubs for not-yet-ported slices
     ├── Workers/
-    │   ├── KafkaOrderConsumerWorker.cs     # BackgroundService — concrete in TASK-016
+    │   ├── KafkaOrderConsumerWorker.cs     # BackgroundService — real Confluent.Kafka IConsumer loop (TASK-016)
     │   ├── OutboxPublisherWorker.cs        # BackgroundService — concrete in TASK-017
     │   └── WarmupDataWorker.cs             # BackgroundService — Redis cache warmup (TASK-011)
     ├── Controllers/                        # added per TASK-011..020
@@ -262,7 +264,7 @@ Each log line includes `RequestId` (auto via `UseSerilogRequestLogging`) and
 | Order CAS (Redis Lua + DB safety net) | TASK-013 | ✅ done (2026-07-14) |
 | Order cancel (distributed lock) | TASK-014 | ✅ done (2026-07-14) |
 | OrderMQ producer | TASK-015 | ✅ done (2026-07-14) |
-| OrderMQ consumer | TASK-016 | pending |
+| OrderMQ consumer | TASK-016 | ✅ done (2026-07-14) |
 | OrderMQ publisher (outbox drain) | TASK-017 | pending |
 | Payment VNPay | TASK-018 | pending |
 | Employee timesheet | TASK-019 | pending |
